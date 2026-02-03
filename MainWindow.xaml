@@ -9,7 +9,11 @@
         Title="MainWindow" Height="400" Width="800">
     <StackPanel>
         <!-- Title -->
-        <ui:TitleBar Title="Rustun" ShowMaximize="False"/>
+        <ui:TitleBar x:Name="AppTitleBar" ShowMaximize="False" CanMaximize="False" Title="Rustun" FontSize="16">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="/Assets/app.png"/>
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
 
         <!-- 添加卡片容器 -->
         <ui:Card Margin="8">
