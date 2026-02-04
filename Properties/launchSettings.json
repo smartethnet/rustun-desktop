@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Rustun (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Rustun (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
