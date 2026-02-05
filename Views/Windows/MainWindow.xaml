@@ -38,12 +38,13 @@
                          IsBackEnabled="False" 
                          IsBackButtonVisible="Collapsed"
                          IsPaneToggleButtonVisible="False"
-                         SelectionChanged="NavView_SelectionChanged">
+                         SelectionChanged="NavView_SelectionChanged"
+                         Loaded="NavView_Loaded">
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Home" Tag="home" Icon="Home"/>
                 <NavigationViewItem Content="Log" Tag="log" Icon="Document"/>
             </NavigationView.MenuItems>
-            <Frame x:Name="rootFrame" />
+            <Frame x:Name="rootFrame" Navigated="rootFrame_Navigated"/>
         </NavigationView>
     </Grid>
 </Window>

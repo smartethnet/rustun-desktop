@@ -24,6 +24,8 @@ namespace Rustun.Views.Windows
     /// </summary>
     public sealed partial class MainWindow : Window
     {
+        private bool _isInitialNavigation = true;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -67,6 +69,32 @@ namespace Rustun.Views.Windows
             if (this.rootFrame.CanGoBack)
             {
                 this.rootFrame.GoBack();
+            }
+        }
+
+        private void rootFrame_Navigated(object sender, NavigationEventArgs e)
+        {
+            foreach (var menuItem in NavView.MenuItems)
+            {
+                if (menuItem is NavigationViewItem navItem)
+                {
+                    if (navItem.Tag.ToString() == e.SourcePageType.Name.Replace("Page", "").ToLower())
+                    {
+                        NavView.SelectedItem = navItem;
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void NavView_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (_isInitialNavigation)
+            {
+                _isInitialNavigation = false;
+
+                // 设置初始页面
+                rootFrame.Navigate(typeof(HomePage));
             }
         }
     }
