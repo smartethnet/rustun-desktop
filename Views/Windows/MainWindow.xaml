@@ -10,7 +10,7 @@
     Title="Rustun">
 
     <Window.SystemBackdrop>
-        <MicaBackdrop Kind="Base"/>
+        <MicaBackdrop />
     </Window.SystemBackdrop>
 
     <Grid>
@@ -20,13 +20,30 @@
             <!-- App Content -->
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <TitleBar x:Name="AppTitleBar" Title="Rustun">
+        <TitleBar x:Name="AppTitleBar" 
+                  Title="Rustun" 
+                  Subtitle="Dev" 
+                  IsPaneToggleButtonVisible="True" 
+                  IsBackButtonVisible="{x:Bind rootFrame.CanGoBack, Mode=OneWay}"
+                  PaneToggleRequested="TitleBar_PaneToggleRequested" 
+                  BackRequested="TitleBar_BackRequested">
             <TitleBar.IconSource>
                 <ImageIconSource ImageSource="/Assets/app.ico" />
             </TitleBar.IconSource>
         </TitleBar>
 
         <!-- App content -->
-        <Frame x:Name="rootFrame" Grid.Row="1"/>
+        <NavigationView  Grid.Row="1" x:Name="NavView" 
+                         PaneDisplayMode="Left" 
+                         IsBackEnabled="False" 
+                         IsBackButtonVisible="Collapsed"
+                         IsPaneToggleButtonVisible="False"
+                         SelectionChanged="NavView_SelectionChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Home" Tag="home" Icon="Home"/>
+                <NavigationViewItem Content="Log" Tag="log" Icon="Document"/>
+            </NavigationView.MenuItems>
+            <Frame x:Name="rootFrame" />
+        </NavigationView>
     </Grid>
 </Window>
