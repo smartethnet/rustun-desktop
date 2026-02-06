@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -10,9 +6,15 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
+using Rustun.Helpers;
+using Rustun.Views.Pages;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
-using Rustun.Views.Pages;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -25,6 +27,8 @@ namespace Rustun.Views.Windows
     public sealed partial class MainWindow : Window
     {
         private bool _isInitialNavigation = true;
+        private OverlappedPresenter? WindowPresenter { get; }
+        private OverlappedPresenterState CurrentWindowState { get; set; }
 
         public MainWindow()
         {
@@ -34,6 +38,31 @@ namespace Rustun.Views.Windows
             ExtendsContentIntoTitleBar = true;
             // Replace system title bar with the WinUI TitleBar.
             SetTitleBar(AppTitleBar);
+
+            // Workaround for WinUI issue #9934:
+            // https://github.com/microsoft/microsoft-ui-xaml/issues/9934.
+            // See `AdjustNavigationViewMargin()` for implementation details.
+            if (AppWindow.Presenter is OverlappedPresenter windowPresenter)
+            {
+                WindowPresenter = windowPresenter;
+                CurrentWindowState = WindowPresenter.State;
+                AdjustNavigationViewMargin(force: true);
+                AppWindow.Changed += (_, _) => AdjustNavigationViewMargin();
+            }
+        }
+
+        private void AdjustNavigationViewMargin(bool? force = null)
+        {
+            if (WindowPresenter is null ||
+                (WindowPresenter.State == CurrentWindowState && force is not true))
+            {
+                return;
+            }
+
+            NavView.Margin = WindowPresenter.State == OverlappedPresenterState.Maximized
+                ? new Thickness(0, -1, 0, 0)
+                : new Thickness(0, -2, 0, 0);
+            CurrentWindowState = WindowPresenter.State;
         }
 
         private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -96,6 +125,22 @@ namespace Rustun.Views.Windows
                 // 设置初始页面
                 rootFrame.Navigate(typeof(HomePage));
             }
+        }
+
+        private void RootGrid_Loaded(object sender, RoutedEventArgs e)
+        {
+            // We need to set the minimum size here because the XamlRoot is not available in the constructor.
+            WindowHelper.SetWindowMinSize(this, 800, 400);
+
+            if (sender is FrameworkElement rootGrid && rootGrid.XamlRoot is not null)
+            {
+                rootGrid.XamlRoot.Changed += RootGridXamlRoot_Changed;
+            }
+        }
+
+        private void RootGridXamlRoot_Changed(XamlRoot sender, XamlRootChangedEventArgs args)
+        {
+            WindowHelper.SetWindowMinSize(this, 800, 400);
         }
     }
 }
