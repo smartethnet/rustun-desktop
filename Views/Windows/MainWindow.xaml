@@ -24,7 +24,7 @@
                   Title="Rustun" 
                   Subtitle="Dev" 
                   IsPaneToggleButtonVisible="True" 
-                  IsBackButtonVisible="{x:Bind rootFrame.CanGoBack, Mode=OneWay}"
+                  IsBackButtonVisible="{x:Bind RootFrame.CanGoBack, Mode=OneWay}"
                   PaneToggleRequested="TitleBar_PaneToggleRequested" 
                   BackRequested="TitleBar_BackRequested">
             <TitleBar.IconSource>
@@ -33,10 +33,9 @@
         </TitleBar>
 
         <!-- App content -->
-        <NavigationView  Grid.Row="1" x:Name="NavView" 
-                         PaneDisplayMode="Left" 
-                         IsBackEnabled="False" 
-                         OpenPaneLength="200"
+        <NavigationView  Grid.Row="1" x:Name="NavigationView" 
+                         PaneDisplayMode="LeftCompact" 
+                         IsBackEnabled="False"
                          IsBackButtonVisible="Collapsed"
                          IsPaneToggleButtonVisible="False"
                          SelectionChanged="NavView_SelectionChanged"
@@ -45,7 +44,7 @@
                 <NavigationViewItem Content="Home" Tag="home" Icon="Home"/>
                 <NavigationViewItem Content="Log" Tag="log" Icon="Document"/>
             </NavigationView.MenuItems>
-            <Frame x:Name="rootFrame" Navigated="rootFrame_Navigated"/>
+            <Frame x:Name="RootFrame" Navigated="OnNavigated"/>
         </NavigationView>
     </Grid>
 </Window>

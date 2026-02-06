@@ -3,7 +3,11 @@
 
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Rustun.Helpers;
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Windows.Storage;
 
 namespace Rustun.Helpers;
 
@@ -90,4 +94,18 @@ public partial class WindowHelper
     static public List<Window> ActiveWindows { get { return _activeWindows; } }
 
     static private List<Window> _activeWindows = new List<Window>();
+
+    static public StorageFolder GetAppLocalFolder()
+    {
+        StorageFolder localFolder;
+        if (!NativeMethods.IsAppPackaged)
+        {
+            localFolder = Task.Run(async () => await StorageFolder.GetFolderFromPathAsync(System.AppContext.BaseDirectory)).Result;
+        }
+        else
+        {
+            localFolder = ApplicationData.Current.LocalFolder;
+        }
+        return localFolder;
+    }
 }

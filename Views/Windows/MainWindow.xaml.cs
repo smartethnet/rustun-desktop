@@ -59,7 +59,7 @@ namespace Rustun.Views.Windows
                 return;
             }
 
-            NavView.Margin = WindowPresenter.State == OverlappedPresenterState.Maximized
+            NavigationView.Margin = WindowPresenter.State == OverlappedPresenterState.Maximized
                 ? new Thickness(0, -1, 0, 0)
                 : new Thickness(0, -2, 0, 0);
             CurrentWindowState = WindowPresenter.State;
@@ -69,7 +69,7 @@ namespace Rustun.Views.Windows
         {
             if (args.IsSettingsSelected)
             {
-                rootFrame.Navigate(typeof(SettingsPage));
+                RootFrame.Navigate(typeof(SettingsPage));
             }
             else if (args.SelectedItemContainer != null)
             {
@@ -77,10 +77,10 @@ namespace Rustun.Views.Windows
                 switch (selectedItemTag)
                 {
                     case "home":
-                        rootFrame.Navigate(typeof(HomePage));
+                        RootFrame.Navigate(typeof(HomePage));
                         break;
                     case "log":
-                        rootFrame.Navigate(typeof(LogPage));
+                        RootFrame.Navigate(typeof(LogPage));
                         break;
                     default:
                         break;
@@ -90,26 +90,26 @@ namespace Rustun.Views.Windows
 
         private void TitleBar_PaneToggleRequested(TitleBar sender, object args)
         {
-            NavView.IsPaneOpen = !NavView.IsPaneOpen;
+            NavigationView.IsPaneOpen = !NavigationView.IsPaneOpen;
         }
 
         private void TitleBar_BackRequested(TitleBar sender, object args)
         {
-            if (this.rootFrame.CanGoBack)
+            if (this.RootFrame.CanGoBack)
             {
-                this.rootFrame.GoBack();
+                this.RootFrame.GoBack();
             }
         }
 
-        private void rootFrame_Navigated(object sender, NavigationEventArgs e)
+        private void OnNavigated(object sender, NavigationEventArgs e)
         {
-            foreach (var menuItem in NavView.MenuItems)
+            foreach (var menuItem in NavigationView.MenuItems)
             {
                 if (menuItem is NavigationViewItem navItem)
                 {
                     if (navItem.Tag.ToString() == e.SourcePageType.Name.Replace("Page", "").ToLower())
                     {
-                        NavView.SelectedItem = navItem;
+                        NavigationView.SelectedItem = navItem;
                         break;
                     }
                 }
@@ -123,7 +123,7 @@ namespace Rustun.Views.Windows
                 _isInitialNavigation = false;
 
                 // 设置初始页面
-                rootFrame.Navigate(typeof(HomePage));
+                RootFrame.Navigate(typeof(HomePage));
             }
         }
 
