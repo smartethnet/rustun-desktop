@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 using Rustun.Helpers;
 using Rustun.Views.Pages;
@@ -13,6 +14,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 
@@ -29,6 +31,11 @@ namespace Rustun.Views.Windows
         private bool _isInitialNavigation = true;
         private OverlappedPresenter? WindowPresenter { get; }
         private OverlappedPresenterState CurrentWindowState { get; set; }
+        public NavigationView NavigationView
+        {
+            get { return NavigationViewControl; }
+        }
+        public Action? NavigationViewLoaded { get; set; }
 
         public MainWindow()
         {
@@ -51,6 +58,13 @@ namespace Rustun.Views.Windows
             }
         }
 
+        // Wraps a call to rootFrame.Navigate to give the Page a way to know which NavigationRootPage is navigating.
+        // Please call this function rather than rootFrame.Navigate to navigate the rootFrame.
+        public void Navigate(Type pageType, object? targetPageArguments = null, NavigationTransitionInfo? navigationTransitionInfo = null)
+        {
+            RootFrame.Navigate(pageType, targetPageArguments, navigationTransitionInfo);
+        }
+
         private void AdjustNavigationViewMargin(bool? force = null)
         {
             if (WindowPresenter is null ||
@@ -59,13 +73,13 @@ namespace Rustun.Views.Windows
                 return;
             }
 
-            NavigationView.Margin = WindowPresenter.State == OverlappedPresenterState.Maximized
+            NavigationViewControl.Margin = WindowPresenter.State == OverlappedPresenterState.Maximized
                 ? new Thickness(0, -1, 0, 0)
                 : new Thickness(0, -2, 0, 0);
             CurrentWindowState = WindowPresenter.State;
         }
 
-        private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+        private void OnNavigationViewSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
             if (args.IsSettingsSelected)
             {
@@ -90,7 +104,7 @@ namespace Rustun.Views.Windows
 
         private void TitleBar_PaneToggleRequested(TitleBar sender, object args)
         {
-            NavigationView.IsPaneOpen = !NavigationView.IsPaneOpen;
+            NavigationViewControl.IsPaneOpen = !NavigationViewControl.IsPaneOpen;
         }
 
         private void TitleBar_BackRequested(TitleBar sender, object args)
@@ -103,28 +117,38 @@ namespace Rustun.Views.Windows
 
         private void OnNavigated(object sender, NavigationEventArgs e)
         {
-            foreach (var menuItem in NavigationView.MenuItems)
+            foreach (var menuItem in NavigationViewControl.MenuItems)
             {
                 if (menuItem is NavigationViewItem navItem)
                 {
                     if (navItem.Tag.ToString() == e.SourcePageType.Name.Replace("Page", "").ToLower())
                     {
-                        NavigationView.SelectedItem = navItem;
+                        NavigationViewControl.SelectedItem = navItem;
                         break;
                     }
                 }
             }
         }
 
-        private void NavView_Loaded(object sender, RoutedEventArgs e)
+        private void OnNavigationViewControlLoaded(object sender, RoutedEventArgs e)
         {
-            if (_isInitialNavigation)
-            {
-                _isInitialNavigation = false;
+            // Delay necessary to ensure NavigationView visual state can match navigation
+            Task.Delay(500).ContinueWith(_ => this.NavigationViewLoaded?.Invoke(), TaskScheduler.FromCurrentSynchronizationContext());
 
-                // 设置初始页面
-                RootFrame.Navigate(typeof(HomePage));
+            var navigationView = sender as NavigationView;
+            navigationView?.RegisterPropertyChangedCallback(NavigationView.IsPaneOpenProperty, OnIsPaneOpenChanged);
+        }
+
+        private void OnIsPaneOpenChanged(DependencyObject sender, DependencyProperty dp)
+        {
+            if (sender is not NavigationView navigationView)
+            {
+                return;
             }
+
+            var announcementText = navigationView.IsPaneOpen ? "Navigation Pane Opened" : "Navigation Pane Closed";
+
+            UIHelper.AnnounceActionForAccessibility(navigationView, announcementText, "NavigationViewPaneIsOpenChangeNotificationId");
         }
 
         private void RootGrid_Loaded(object sender, RoutedEventArgs e)
@@ -136,6 +160,9 @@ namespace Rustun.Views.Windows
             {
                 rootGrid.XamlRoot.Changed += RootGridXamlRoot_Changed;
             }
+
+            NavigationOrientationHelper.UpdateNavigationViewForElement(NavigationOrientationHelper.IsLeftMode());
+            TitleBarHelper.ApplySystemThemeToCaptionButtons(this, RootGrid.ActualTheme);
         }
 
         private void RootGridXamlRoot_Changed(XamlRoot sender, XamlRootChangedEventArgs args)

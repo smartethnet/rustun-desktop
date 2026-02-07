@@ -33,13 +33,13 @@
         </TitleBar>
 
         <!-- App content -->
-        <NavigationView  Grid.Row="1" x:Name="NavigationView" 
-                         PaneDisplayMode="LeftCompact" 
+        <NavigationView  Grid.Row="1" x:Name="NavigationViewControl" 
+                         PaneDisplayMode="Auto" 
                          IsBackEnabled="False"
                          IsBackButtonVisible="Collapsed"
                          IsPaneToggleButtonVisible="False"
-                         SelectionChanged="NavView_SelectionChanged"
-                         Loaded="NavView_Loaded">
+                         SelectionChanged="OnNavigationViewSelectionChanged"
+                         Loaded="OnNavigationViewControlLoaded">
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Home" Tag="home" Icon="Home"/>
                 <NavigationViewItem Content="Log" Tag="log" Icon="Document"/>
