@@ -3,19 +3,17 @@ using System.Runtime.CompilerServices;
 
 namespace Rustun.Helpers;
 
-public partial class ObservableSettings : INotifyPropertyChanged
+public partial class ObservableSettings(ISettingsProvider provider) : INotifyPropertyChanged
 {
-    private readonly ISettingsProvider provider;
+    private readonly ISettingsProvider provider = provider;
 
-    public ObservableSettings(ISettingsProvider provider)
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected bool Set<T>(T value, [CallerMemberName] string? propertyName = null)
     {
-        this.provider = provider;
-    }
+        if (propertyName == null)
+            throw new System.ArgumentNullException(nameof(value));
 
-    public event PropertyChangedEventHandler PropertyChanged;
-
-    protected bool Set<T>(T value, [CallerMemberName] string propertyName = null)
-    {
         if (provider.Contains(propertyName))
         {
             var currentValue = provider.Get<T>(propertyName);
@@ -28,13 +26,23 @@ public partial class ObservableSettings : INotifyPropertyChanged
         return true;
     }
 
-    protected T Get<T>([CallerMemberName] string propertyName = null)
+    protected T Get<T>([CallerMemberName] string? propertyName = null)
     {
-        return provider.Get<T>(propertyName);
+        if (propertyName == null)
+            throw new System.ArgumentNullException(nameof(propertyName));
+
+        var value = provider.Get<T>(propertyName);
+        if (value is null)
+            throw new System.InvalidOperationException($"Setting '{propertyName}' not found or is null.");
+
+        return value;
     }
 
-    protected T GetOrCreateDefault<T>(T defaultValue, [CallerMemberName] string propertyName = null)
+    protected T GetOrCreateDefault<T>(T defaultValue, [CallerMemberName] string? propertyName = null)
     {
+        if (propertyName == null)
+            throw new System.ArgumentNullException(nameof(propertyName));
+
         if (!provider.Contains(propertyName))
             Set(defaultValue, propertyName);
 

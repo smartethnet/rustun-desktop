@@ -27,17 +27,17 @@ public partial class SettingsMigration
     {
         if (NativeMethods.IsAppPackaged)
         {
-            string raw = appData.LocalSettings.Values[key] as string;
+            string? raw = appData.LocalSettings.Values[key] as string;
             if (string.IsNullOrEmpty(raw))
-                return null;
+                return new List<string>();
 
             raw = raw.Trim();
 
             // Only handle old comma-separated format
             if (raw.StartsWith("[") && raw.EndsWith("]"))
             {
-                // Looks like JSON → treat as new format, return null
-                return null;
+                // Looks like JSON → treat as new format, return empty
+                return new List<string>();
             }
 
             // Old comma-separated format
@@ -46,7 +46,7 @@ public partial class SettingsMigration
                       .ToList();
         }
 
-        return null;
+        return new List<string>();
     }
 
     public static void MigrateRecentlyVisited()

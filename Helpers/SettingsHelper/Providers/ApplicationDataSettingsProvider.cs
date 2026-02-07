@@ -16,11 +16,11 @@ public partial class ApplicationDataSettingsProvider : ISettingsProvider
 
     public bool Contains(string key) => container.Values.ContainsKey(key);
 
-    public object Get(string key) => container.Values.TryGetValue(key, out var value) ? value : null;
+    public object? Get(string key) => container.Values.TryGetValue(key, out var value) ? value : null;
 
     public void Set(string key, object value) => container.Values[key] = value;
 
-    public T Get<T>(string key)
+    public T? Get<T>(string key)
     {
         if (!container.Values.TryGetValue(key, out var value))
             return default;
@@ -33,7 +33,16 @@ public partial class ApplicationDataSettingsProvider : ISettingsProvider
             try
             {
                 var typeInfo = SettingsJsonContext.Default.GetTypeInfo(typeof(T));
-                return (T)JsonSerializer.Deserialize(str, typeInfo);
+                if (typeInfo is null)
+                {
+                    HandleCorruptedKey(key);
+                    return default;
+                }
+                var deserialized = JsonSerializer.Deserialize(str, typeInfo);
+                if (deserialized is T result)
+                    return result;
+                HandleCorruptedKey(key);
+                return default;
             }
             catch (Exception)
             {
@@ -59,11 +68,21 @@ public partial class ApplicationDataSettingsProvider : ISettingsProvider
 
     public void Set<T>(string key, T value)
     {
-        object storedValue = IsSimpleType(typeof(T))
-            ? value
-            : JsonSerializer.Serialize(value, SettingsJsonContext.Default.GetTypeInfo(typeof(T)));
-
-        container.Values[key] = storedValue;
+        if (IsSimpleType(typeof(T)))
+        {
+            container.Values[key] = value;
+        }
+        else
+        {
+            var typeInfo = SettingsJsonContext.Default.GetTypeInfo(typeof(T));
+            if (typeInfo is null)
+            {
+                // 处理无法获取类型信息的情况，移除该键
+                HandleCorruptedKey(key);
+                return;
+            }
+            container.Values[key] = JsonSerializer.Serialize(value, typeInfo);
+        }
     }
 
     private static readonly HashSet<Type> ExtraSimpleTypes = new()

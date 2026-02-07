@@ -18,23 +18,34 @@ public partial class JsonSettingsProvider : ISettingsProvider
 
     public bool Contains(string key) => values.ContainsKey(key);
 
-    public object Get(string key) => values.TryGetValue(key, out var value) ? value : null;
+    public object? Get(string key) => values.TryGetValue(key, out var value) ? value : null;
 
     public void Set(string key, object value)
     {
-        var json = JsonSerializer.SerializeToElement(value, SettingsJsonContext.Default.GetTypeInfo(value.GetType()));
+        var typeInfo = SettingsJsonContext.Default.GetTypeInfo(value.GetType());
+        if (typeInfo == null)
+            throw new ArgumentException($"无法为类型 {value.GetType()} 获取 JsonTypeInfo。", nameof(value));
+        var json = JsonSerializer.SerializeToElement(value, typeInfo);
         values[key] = json;
         Save();
     }
 
-    public T Get<T>(string key)
+    public T? Get<T>(string key)
     {
         if (!values.TryGetValue(key, out var jsonElement))
             return default;
 
+        var typeInfo = SettingsJsonContext.Default.GetTypeInfo(typeof(T));
+        if (typeInfo == null)
+        {
+            HandleCorruptedKey(key);
+            return default;
+        }
+
         try
         {
-            return (T)jsonElement.Deserialize(SettingsJsonContext.Default.GetTypeInfo(typeof(T)));
+            var result = jsonElement.Deserialize(typeInfo);
+            return result is null ? default : (T)result;
         }
         catch (Exception)
         {
@@ -43,10 +54,12 @@ public partial class JsonSettingsProvider : ISettingsProvider
         }
     }
 
-
     public void Set<T>(string key, T value)
     {
-        var json = JsonSerializer.SerializeToElement(value, SettingsJsonContext.Default.GetTypeInfo(typeof(T)));
+        var typeInfo = SettingsJsonContext.Default.GetTypeInfo(typeof(T));
+        if (typeInfo == null)
+            throw new ArgumentException($"无法为类型 {typeof(T)} 获取 JsonTypeInfo。", nameof(value));
+        var json = JsonSerializer.SerializeToElement(value, typeInfo);
         values[key] = json;
         Save();
     }
