@@ -55,6 +55,11 @@
     <Folder Include="Views\Windows\" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="client.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
     <Page Update="Views\Pages\SettingsPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
