@@ -41,8 +41,12 @@
                          SelectionChanged="OnNavigationViewSelectionChanged"
                          Loaded="OnNavigationViewControlLoaded">
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Home" Tag="home" Icon="Home"/>
-                <NavigationViewItem Content="Log" Tag="log" Icon="Document"/>
+                <NavigationViewItem Content="VPN" Tag="home">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE705;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Log" Tag="log" Icon="ProtectedDocument"/>
             </NavigationView.MenuItems>
             <Frame x:Name="RootFrame" Navigated="OnNavigated"/>
         </NavigationView>

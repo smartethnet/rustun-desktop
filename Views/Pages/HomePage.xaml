@@ -6,12 +6,108 @@
     xmlns:local="using:Rustun.Views.Pages"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
     mc:Ignorable="d">
 
-    <Grid>
-        <TextBlock Text="Welcome to the Home Page!" 
-                   HorizontalAlignment="Center" 
-                   VerticalAlignment="Center" 
-                   FontSize="24"/>
+    <Page.Resources>
+        <!--  Spacing between rows  -->
+        <x:Double x:Key="VerticalSpacing">4</x:Double>
+    </Page.Resources>
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            x:Name="PageHeader"
+            MaxWidth="1064"
+            Margin="36,24,36,0"
+            AutomationProperties.HeadingLevel="Level1"
+            Style="{StaticResource TitleTextBlockStyle}"
+            Text="VPN" />
+
+        <ScrollView
+            Grid.Row="1"
+            Padding="36,0,36,0"
+            VerticalScrollBarVisibility="Auto"
+            VerticalScrollMode="Auto">
+
+            <StackPanel MaxWidth="1064" Spacing="{StaticResource VerticalSpacing}" Padding="0,36,0,36">
+                <!-- Server info and statics -->
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- VPN Control -->
+                    <Border 
+                        Grid.Column="0"
+                        CornerRadius="4"
+                        Background="{ThemeResource CardBackgroundFillColorDefault}"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource CardStrokeColorDefault}"
+                        Margin="0 8 0 8"
+                        Padding="16">
+
+                        <StackPanel Spacing="8">
+                            <!-- Server info and connect button -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Text="Server" FontSize="16" FontWeight="ExtraBold" Grid.Column="0" HorizontalAlignment="Left"/>
+                                <ToggleSwitch x:Name="connectToggleSwitch" Grid.Column="2" HorizontalAlignment="Right" MinWidth="0" Width="Auto"/>
+                                <ProgressRing IsActive="{x:Bind connectToggleSwitch.IsOn, Mode=OneWay}" Width="32" Grid.Column="2"/>
+                            </Grid>
+                            
+                            <!-- Server Url -->
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon Glyph="&#xE753;" />
+                                <TextBlock Text="119.23.140.197:18080" />
+                            </StackPanel>
+
+                            <!-- client identity -->
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon Glyph="&#xF552;" />
+                                <TextBlock Text="client-android" />
+                            </StackPanel>
+
+                            <!-- Status text -->
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon Glyph="&#xF167;" />
+                                <TextBlock Text="Disconnect" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border 
+                        Grid.Column="1"
+                        CornerRadius="4"
+                        Background="{ThemeResource CardBackgroundFillColorDefault}"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource CardStrokeColorDefault}"
+                        Margin="0 8 0 8"
+                        Padding="16">
+                        <TextBlock
+                            Margin="0,0,4,0"
+                            Text="Server info and statics 1111111" />
+                    </Border>
+                </Grid>
+
+                <!-- Peers -->
+                <Grid>
+
+                </Grid>
+            </StackPanel>
+        </ScrollView>
     </Grid>
 </Page>
