@@ -20,13 +20,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock
-            x:Name="PageHeader"
-            MaxWidth="1064"
-            Margin="36,24,36,0"
-            AutomationProperties.HeadingLevel="Level1"
-            Style="{StaticResource TitleTextBlockStyle}"
-            Text="VPN" />
+        <TextBlock x:Name="PageHeader" MaxWidth="1064" Margin="36,24,36,0" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource TitleTextBlockStyle}" Text="VPN" />
 
         <ScrollView
             Grid.Row="1"
@@ -70,19 +64,19 @@
                             </Grid>
                             
                             <!-- Server Url -->
-                            <StackPanel Orientation="Horizontal" Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource VerticalSpacing}">
                                 <FontIcon Glyph="&#xE753;" />
                                 <TextBlock Text="119.23.140.197:18080" />
                             </StackPanel>
 
                             <!-- client identity -->
-                            <StackPanel Orientation="Horizontal" Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource VerticalSpacing}">
                                 <FontIcon Glyph="&#xF552;" />
                                 <TextBlock Text="client-android" />
                             </StackPanel>
 
                             <!-- Status text -->
-                            <StackPanel Orientation="Horizontal" Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource VerticalSpacing}">
                                 <FontIcon Glyph="&#xF167;" />
                                 <TextBlock Text="Disconnect" />
                             </StackPanel>
@@ -97,9 +91,6 @@
                         BorderBrush="{ThemeResource CardStrokeColorDefault}"
                         Margin="0 8 0 8"
                         Padding="16">
-                        <TextBlock
-                            Margin="0,0,4,0"
-                            Text="Server info and statics 1111111" />
                     </Border>
                 </Grid>
 
