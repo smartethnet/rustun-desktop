@@ -22,11 +22,7 @@
 
         <TextBlock x:Name="PageHeader" MaxWidth="1064" Margin="36,24,36,0" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource TitleTextBlockStyle}" Text="VPN" />
 
-        <ScrollView
-            Grid.Row="1"
-            Padding="36,0,36,0"
-            VerticalScrollBarVisibility="Auto"
-            VerticalScrollMode="Auto">
+        <ScrollView Grid.Row="1" Padding="36,0,36,0" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
 
             <StackPanel MaxWidth="1064" Spacing="{StaticResource VerticalSpacing}" Padding="0,36,0,36">
                 <!-- Server info and statics -->
@@ -83,7 +79,8 @@
                         </StackPanel>
                     </Border>
 
-                    <Border 
+                    <Border
+                        Visibility="Collapsed"
                         Grid.Column="1"
                         CornerRadius="4"
                         Background="{ThemeResource CardBackgroundFillColorDefault}"

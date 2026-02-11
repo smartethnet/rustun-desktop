@@ -23,8 +23,16 @@ namespace Rustun.Views.Pages;
 /// </summary>
 public sealed partial class LogPage : Page
 {
+    private List<string> logs = new List<string>();
+
     public LogPage()
     {
         InitializeComponent();
+
+        // generate some logs for demonstration
+        for (int i = 1; i <= 100000; i++)
+        {
+            logs.Add($"This is a sample log message. {i}");
+        }
     }
 }
