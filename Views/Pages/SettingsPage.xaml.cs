@@ -1,19 +1,10 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
 using Rustun.Helpers;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Windows.ApplicationModel.DataTransfer;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -23,7 +14,7 @@ namespace Rustun.Views.Pages;
 /// <summary>
 /// An empty page that can be used on its own or navigated to within a Frame.
 /// </summary>
-public sealed partial class SettingsPage : Page
+public sealed partial class SettingsPage : Page, INotifyPropertyChanged
 {
     public string Version
     {
@@ -37,6 +28,58 @@ public sealed partial class SettingsPage : Page
 
     public string WinAppSdkRuntimeDetails => VersionHelper.WinAppSdkRuntimeDetails;
     private int lastNavigationSelectionMode = 0;
+
+    public string serverIp
+    {
+        get => SettingsHelper.Current.ServerIp;
+        set
+        {
+            SettingsHelper.Current.ServerIp = value ?? string.Empty;
+            OnPropertyChanged();
+        }
+    }
+    public string serverPort
+    {
+        get => SettingsHelper.Current.ServerPort;
+        set
+        {
+            SettingsHelper.Current.ServerPort = value ?? string.Empty;
+            OnPropertyChanged();
+        }
+    }
+    public string identity
+    {
+        get => SettingsHelper.Current.Identity;
+        set
+        {
+            SettingsHelper.Current.Identity = value ?? string.Empty;
+            OnPropertyChanged();
+        }
+    }
+    public string encryptionMode
+    {
+        get => SettingsHelper.Current.EncryptionMode;
+        set
+        {
+            SettingsHelper.Current.EncryptionMode = value ?? string.Empty;
+            OnPropertyChanged();
+        }
+    }
+    public string encryptionSecret
+    {
+        get => SettingsHelper.Current.EncryptionSecret;
+        set
+        {
+            SettingsHelper.Current.EncryptionSecret = value ?? string.Empty;
+            OnPropertyChanged();
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 
     public SettingsPage()
     {
@@ -71,6 +114,22 @@ public sealed partial class SettingsPage : Page
         }
 
         lastNavigationSelectionMode = navigationLocation.SelectedIndex;
+
+        switch(encryptionMode)
+        {
+            case "Chacha20":
+                encryptMode.SelectedIndex = 0;
+                break;
+            case "AES":
+                encryptMode.SelectedIndex = 1;
+                break;
+            case "XOR":
+                encryptMode.SelectedIndex = 2;
+                break;
+            default:
+                encryptMode.SelectedIndex = -1;
+                break;
+        }
     }
 
     private void themeMode_SelectionChanged(object sender, RoutedEventArgs e)
@@ -106,5 +165,10 @@ public sealed partial class SettingsPage : Page
         DataPackage package = new DataPackage();
         package.SetText(gitCloneTextBlock.Text);
         Clipboard.SetContent(package);
+    }
+
+    private void encryptMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        encryptionMode = (encryptMode.SelectedItem as ComboBoxItem)?.Tag.ToString() ?? string.Empty;
     }
 }

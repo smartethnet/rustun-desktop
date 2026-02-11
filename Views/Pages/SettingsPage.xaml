@@ -51,8 +51,54 @@
                     <StackPanel.ChildrenTransitions>
                         <RepositionThemeTransition />
                     </StackPanel.ChildrenTransitions>
-                    <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" Text="Appearance &amp; behavior" />
 
+                    <!--  Server  -->
+                    <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" Text="Server" />
+                    <toolkit:SettingsExpander Header="Server configuration">
+                        <toolkit:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE713;" />
+                        </toolkit:SettingsExpander.HeaderIcon>
+                        <toolkit:SettingsExpander.Items>
+                            <toolkit:SettingsCard Header="Server IP">
+                                <toolkit:SettingsCard.HeaderIcon>
+                                    <FontIcon Glyph="&#xE753;" />
+                                </toolkit:SettingsCard.HeaderIcon>
+                                <TextBox x:Name="serverIpTextBox" PlaceholderText="Enter server IP address" MinWidth="300" Text="{x:Bind serverIp, Mode=TwoWay}"/>
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard Header="Server Port">
+                                <toolkit:SettingsCard.HeaderIcon>
+                                    <FontIcon Glyph="&#xE75F;" />
+                                </toolkit:SettingsCard.HeaderIcon>
+                                <TextBox x:Name="serverPortTextBox" Text="{x:Bind serverPort, Mode=TwoWay}" PlaceholderText="Enter server Port" MinWidth="300"/>
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard Header="Encryption">
+                                <toolkit:SettingsCard.HeaderIcon>
+                                    <FontIcon Glyph="&#xE72E;" />
+                                </toolkit:SettingsCard.HeaderIcon>
+                                <ComboBox x:Name="encryptMode" SelectionChanged="encryptMode_SelectionChanged">
+                                    <ComboBoxItem Content="ChaCha20-Poly1305" Tag="Chacha20" />
+                                    <ComboBoxItem Content="AES-256-GCM" Tag="AES" />
+                                    <ComboBoxItem Content="XOR" Tag="XOR" />
+                                    <ComboBoxItem Content="Plain" Tag="Plain" />
+                                </ComboBox>
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard Header="Encryption Secret">
+                                <toolkit:SettingsCard.HeaderIcon>
+                                    <FontIcon Glyph="&#xEC19;" />
+                                </toolkit:SettingsCard.HeaderIcon>
+                                <TextBox x:Name="serverSecretTextBox" Text="{x:Bind encryptionSecret, Mode=TwoWay}" PlaceholderText="Enter encryption secret" MinWidth="300"/>
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard Header="Client Identity">
+                                <toolkit:SettingsCard.HeaderIcon>
+                                    <FontIcon Glyph="&#xE977;" />
+                                </toolkit:SettingsCard.HeaderIcon>
+                                <TextBox x:Name="clientIdentityTextBox" Text="{x:Bind identity, Mode=TwoWay}" PlaceholderText="Enter client identity" MinWidth="300"/>
+                            </toolkit:SettingsCard>
+                        </toolkit:SettingsExpander.Items>
+                    </toolkit:SettingsExpander>
+
+                    <!-- Appearance & behavior -->
+                    <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" Text="Appearance &amp; behavior" />
                     <toolkit:SettingsCard Description="Select which app theme to display" Header="App theme">
                         <toolkit:SettingsCard.HeaderIcon>
                             <FontIcon Glyph="&#xE790;" />
@@ -66,7 +112,6 @@
                             <ComboBoxItem Content="Use system setting" Tag="Default" />
                         </ComboBox>
                     </toolkit:SettingsCard>
-
                     <toolkit:SettingsCard Header="Navigation style">
                         <toolkit:SettingsCard.HeaderIcon>
                             <FontIcon Glyph="&#xF594;" />

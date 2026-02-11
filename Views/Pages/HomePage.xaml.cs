@@ -12,6 +12,7 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
+using Rustun.Helpers;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -26,5 +27,29 @@ public sealed partial class HomePage : Page
     public HomePage()
     {
         InitializeComponent();
+    }
+
+    private string serverUrl
+    {
+        get
+        {
+            string serverIp = SettingsHelper.Current.ServerIp;
+            string serverPort = SettingsHelper.Current.ServerPort;
+            if (string.IsNullOrEmpty(serverIp) || string.IsNullOrEmpty(serverPort))
+            {
+                return "unset";
+            }
+            return $"{serverIp}:{serverPort}";
+        }
+    }
+    private string identity => SettingsHelper.Current.Identity;
+    private bool isServerInfoSet
+    {
+        get
+        {
+            string serverIp = SettingsHelper.Current.ServerIp;
+            string serverPort = SettingsHelper.Current.ServerPort;
+            return !string.IsNullOrEmpty(serverIp) && !string.IsNullOrEmpty(serverPort);
+        }
     }
 }

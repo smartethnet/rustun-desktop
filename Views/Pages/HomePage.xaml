@@ -23,8 +23,12 @@
         <TextBlock x:Name="PageHeader" MaxWidth="1064" Margin="36,24,36,0" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource TitleTextBlockStyle}" Text="VPN" />
 
         <ScrollView Grid.Row="1" Padding="36,0,36,0" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
-
             <StackPanel MaxWidth="1064" Spacing="{StaticResource VerticalSpacing}" Padding="0,36,0,36">
+                <InfoBar
+                    IsOpen="{x:Bind isServerInfoSet.Equals(x:False)}"
+                    Severity="Error"
+                    Message="Server configuration were not set. Please goto Settings page and set the nessary info." />
+
                 <!-- Server info and statics -->
                 <Grid ColumnSpacing="16">
                     <Grid.ColumnDefinitions>
@@ -62,13 +66,13 @@
                             <!-- Server Url -->
                             <StackPanel Orientation="Horizontal" Spacing="{StaticResource VerticalSpacing}">
                                 <FontIcon Glyph="&#xE753;" />
-                                <TextBlock Text="119.23.140.197:18080" />
+                                <TextBlock Text="{x:Bind serverUrl}" />
                             </StackPanel>
 
                             <!-- client identity -->
                             <StackPanel Orientation="Horizontal" Spacing="{StaticResource VerticalSpacing}">
                                 <FontIcon Glyph="&#xF552;" />
-                                <TextBlock Text="client-android" />
+                                <TextBlock Text="{x:Bind identity}" />
                             </StackPanel>
 
                             <!-- Status text -->

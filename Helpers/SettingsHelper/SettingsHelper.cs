@@ -57,10 +57,41 @@ public partial class SettingsHelper : ObservableSettings
         updater(list);
         Favorites = list;
     }
+
     public void UpdateRecentlyVisited(Action<List<string>> updater)
     {
         var list = RecentlyVisited;
         updater(list);
         RecentlyVisited = list;
+    }
+
+    public string ServerIp
+    {
+        get => GetOrCreateDefault<string>(string.Empty);
+        set => Set(value);
+    }
+
+    public string ServerPort
+    {
+        get => GetOrCreateDefault<string>(string.Empty);
+        set => Set(value);
+    }
+
+    public string EncryptionMode
+    {
+        get => GetOrCreateDefault<string>(string.Empty);
+        set => Set(value);
+    }
+
+    public string EncryptionSecret
+    {
+        get => GetOrCreateDefault<string>(string.Empty);
+        set => Set(value);
+    }
+
+    public string Identity
+    {
+        get => GetOrCreateDefault<string>(string.Empty);
+        set => Set(value);
     }
 }
