@@ -7,6 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
+    Unloaded="Page_Unloaded"
     mc:Ignorable="d">
 
     <Page.Resources>
@@ -44,7 +45,7 @@
                         BorderThickness="1"
                         BorderBrush="{ThemeResource CardStrokeColorDefault}"
                         Margin="0 8 0 8"
-                        Padding="16">
+                        Padding="16, 8, 16, 16">
 
                         <StackPanel Spacing="8">
                             <!-- Server info and connect button -->
@@ -58,9 +59,11 @@
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Text="Server" FontSize="16" FontWeight="ExtraBold" Grid.Column="0" HorizontalAlignment="Left"/>
-                                <ToggleSwitch x:Name="connectToggleSwitch" Grid.Column="2" HorizontalAlignment="Right" MinWidth="0" Width="Auto"/>
-                                <ProgressRing IsActive="{x:Bind connectToggleSwitch.IsOn, Mode=OneWay}" Width="32" Grid.Column="2"/>
+                                <TextBlock Text="Server" FontSize="16" FontWeight="ExtraBold" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Padding="0" Spacing="8">
+                                    <ProgressRing IsActive="{x:Bind Loading, Mode=OneWay}" Width="16" Height="16" Grid.Column="2"/>
+                                    <ToggleSwitch IsOn="{x:Bind IsProcessRunning,Mode=OneWay}" MinWidth="0" Width="Auto" Toggled="connectToggleSwitch_Toggled"/>
+                                </StackPanel>
                             </Grid>
                             
                             <!-- Server Url -->
@@ -78,7 +81,7 @@
                             <!-- Status text -->
                             <StackPanel Orientation="Horizontal" Spacing="{StaticResource VerticalSpacing}">
                                 <FontIcon Glyph="&#xF167;" />
-                                <TextBlock Text="Disconnect" />
+                                <TextBlock x:Name="statusText" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
