@@ -43,6 +43,7 @@ namespace Rustun.Services
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
+                    RedirectStandardInput = false,
                     CreateNoWindow = true
                 };
 
