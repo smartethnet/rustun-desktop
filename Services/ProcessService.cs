@@ -44,7 +44,9 @@ namespace Rustun.Services
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     RedirectStandardInput = false,
-                    CreateNoWindow = true
+                    CreateNoWindow = true,
+                    StandardErrorEncoding = System.Text.Encoding.UTF8,
+                    StandardOutputEncoding = System.Text.Encoding.UTF8,
                 };
 
                 _clientProcess = new Process { StartInfo = startInfo };
@@ -74,7 +76,7 @@ namespace Rustun.Services
                 {
                     OutputReceived?.Invoke(this, new ProcessEventArgs
                     {
-                        Message = $"[ERROR] {ex.Message}",
+                        Message = ex.Message,
                         ExitCode = -1
                     });
                 });
@@ -86,13 +88,9 @@ namespace Rustun.Services
         {
             if (!string.IsNullOrEmpty(e.Data))
             {
-                var dispatcherQueue = DispatcherQueue.GetForCurrentThread();
-                dispatcherQueue?.TryEnqueue(() =>
+                OutputReceived?.Invoke(this, new ProcessEventArgs
                 {
-                    OutputReceived?.Invoke(this, new ProcessEventArgs
-                    {
-                        Message = $"[INFO] {e.Data}"
-                    });
+                    Message = e.Data
                 });
             }
         }
@@ -151,18 +149,6 @@ namespace Rustun.Services
             }
 
             _isRunning = false;
-        }
-
-        private void debug(string message)
-        {
-            var dispatcherQueue = DispatcherQueue.GetForCurrentThread();
-            dispatcherQueue?.TryEnqueue(() =>
-            {
-                OutputReceived?.Invoke(this, new ProcessEventArgs
-                {
-                    Message = $"[DEBUG] {message}"
-                });
-            });
         }
     }
 }
