@@ -117,14 +117,8 @@ public sealed partial class HomePage : Page, INotifyPropertyChanged
             }
 
             // 获取应用程序所在目录
-            var appFolder = Package.Current.InstalledLocation.Path;
+            var appFolder = Directory.GetCurrentDirectory();
             var exePath = Path.Combine(appFolder, "client.exe");
-
-            // 如果不在应用程序目录，尝试当前目录
-            if (!File.Exists(exePath))
-            {
-                exePath = Path.Combine(Directory.GetCurrentDirectory(), "client.exe");
-            }
 
             if (!File.Exists(exePath))
             {
