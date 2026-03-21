@@ -100,7 +100,7 @@ public partial class WindowHelper
         StorageFolder localFolder;
         if (!NativeMethods.IsAppPackaged)
         {
-            localFolder = Task.Run(async () => await StorageFolder.GetFolderFromPathAsync(System.AppContext.BaseDirectory)).Result;
+            localFolder = Task.Run(async () => await StorageFolder.GetFolderFromPathAsync(AppContext.BaseDirectory)).Result;
         }
         else
         {

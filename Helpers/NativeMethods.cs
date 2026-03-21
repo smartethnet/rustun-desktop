@@ -2,49 +2,13 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Windows.Win32.Foundation;
+using Windows.Win32.System.Diagnostics.Debug;
 
 namespace Rustun.Helpers;
+
 internal partial class NativeMethods
 {
-    [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
-    internal static extern int SetWindowLong32(IntPtr hWnd, WindowLongIndexFlags nIndex, WinProc newProc);
-
-    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
-    internal static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, WindowLongIndexFlags nIndex, WinProc newProc);
-
-    [DllImport("User32.dll", CharSet = CharSet.Auto, EntryPoint = "SetWindowLongPtr")]
-    internal static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
-
-    [DllImport("User32.dll", CharSet = CharSet.Auto, EntryPoint = "SetWindowLong")]
-    internal static extern IntPtr SetWindowLong(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
-
-
-    [DllImport("user32.dll")]
-    internal static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, WindowMessage Msg, IntPtr wParam, IntPtr lParam);
-
-    internal unsafe static void SetWindowKeyHook()
-    {
-        delegate* unmanaged[Stdcall]<int, WPARAM, LPARAM, LRESULT> callback = &HookCallback;
-
-        var moduleHandle = Windows.Win32.PInvoke.GetModuleHandle(string.Empty);
-        var threadId = Windows.Win32.PInvoke.GetCurrentThreadId();
-
-        var res = Windows.Win32.PInvoke.SetWindowsHookEx(Windows.Win32.UI.WindowsAndMessaging.WINDOWS_HOOK_ID.WH_KEYBOARD, callback, moduleHandle, threadId);
-
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvStdcall) })]
-        static LRESULT HookCallback(int msg, WPARAM wPARAM, LPARAM lPARAM)
-        {
-            if (msg >= 0 && IsKeyDownHook(lPARAM))
-            {
-                RootFrameNavigationHelper.RaiseKeyPressed((uint)wPARAM);
-            }
-            return Windows.Win32.PInvoke.CallNextHookEx(null, msg, wPARAM, lPARAM);
-        }
-    }
-
     internal static bool IsKeyDownHook(IntPtr lWord)
     {
         // The 30th bit tells what the previous key state is with 0 being the "UP" state
@@ -88,5 +52,25 @@ internal partial class NativeMethods
         }
 
         return null;
+    }
+
+    internal static string GetErrorMessage(int errorCode)
+    {
+        unsafe
+        {
+            FORMAT_MESSAGE_OPTIONS options = (FORMAT_MESSAGE_OPTIONS.FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_OPTIONS.FORMAT_MESSAGE_IGNORE_INSERTS);
+
+            char[] buffer = new char[512];
+            sbyte* arguments = null;
+
+            uint size = Windows.Win32.PInvoke.FormatMessage(options, (void*)0, (uint)errorCode, 0, buffer, (uint)buffer.Length, in arguments);
+            if (size == 0)
+            {
+                return $"Unknown error (code {errorCode})";
+            }
+
+            string message = new string(buffer, 0, (int)size);
+            return message.Trim();
+        }
     }
 }

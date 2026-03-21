@@ -1,13 +1,13 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.Windows.AppLifecycle;
 using Microsoft.Windows.BadgeNotifications;
 using Rustun.Helpers;
+using Rustun.Services;
 using Rustun.Views.Pages;
 using Rustun.Views.Windows;
+using Serilog;
 using System.Collections.Generic;
-using System.Linq;
-using Windows.ApplicationModel.Activation;
+using System.IO;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -20,6 +20,7 @@ namespace Rustun
     public partial class App : Application
     {
         internal static MainWindow MainWindow { get; private set; } = null!;
+        internal static VpnService VpnService { get; private set; } = VpnService.Instance;
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -28,13 +29,15 @@ namespace Rustun
         public App()
         {
             InitializeComponent();
+            SetupLogging();
+            VpnService.start("192.168.100.1", "255.255.255.0");
         }
 
         /// <summary>
         /// Invoked when the application is launched.
         /// </summary>
         /// <param name="args">Details about the launch request and process.</param>
-        protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
             MainWindow = new MainWindow();
             MainWindow.Activate();
@@ -84,6 +87,15 @@ namespace Rustun
 
             // Activate the startup window.
             MainWindow.Activate();
+        }
+
+        private void SetupLogging()
+        {
+            var logFile = Path.Combine(WindowHelper.GetAppLocalFolder().Path, "logs", "rustun-.log");
+            Log.Logger = new LoggerConfiguration()
+               .MinimumLevel.Verbose()
+               .WriteTo.File(logFile, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 31)
+               .CreateLogger();
         }
     }
 }
