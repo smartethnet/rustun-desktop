@@ -1,11 +1,14 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.BadgeNotifications;
+using NetWintun;
 using Rustun.Helpers;
 using Rustun.Services;
 using Rustun.Views.Pages;
 using Rustun.Views.Windows;
 using Serilog;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -68,6 +71,9 @@ namespace Rustun
                         }
                     }
                 }
+
+                // Flush and close the logger to ensure all logs are written before the application exits
+                Log.CloseAndFlush();
             };
         }
 
