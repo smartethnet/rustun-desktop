@@ -4,6 +4,7 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="../Rustun.Lib/Rustun.Lib.csproj" Id="5a275e64-3652-456b-a892-89d4eba2a2b4" />
   <Project Path="Rustun.csproj">
     <Platform Solution="*|ARM64" Project="ARM64" />
     <Platform Solution="*|x64" Project="x64" />

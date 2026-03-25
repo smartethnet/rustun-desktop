@@ -33,7 +33,6 @@ namespace Rustun
         {
             InitializeComponent();
             SetupLogging();
-            VpnService.start("192.168.100.1", "255.255.255.0");
         }
 
         /// <summary>
