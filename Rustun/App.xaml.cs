@@ -100,6 +100,7 @@ namespace Rustun
             Log.Logger = new LoggerConfiguration()
                .MinimumLevel.Verbose()
                .WriteTo.File(logFile, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 31)
+               .WriteTo.Debug()
                .CreateLogger();
         }
     }
