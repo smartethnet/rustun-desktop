@@ -4,6 +4,7 @@ using DotNetty.Transport.Channels.Sockets;
 using Rustun.Lib.Crypto;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 
 namespace Rustun.Lib
@@ -72,7 +73,7 @@ namespace Rustun.Lib
             bootstrap.Option(ChannelOption.SoKeepalive, true);
             bootstrap.Option(ChannelOption.SoTimeout, 5000);
             bootstrap.Option(ChannelOption.ConnectTimeout, TimeSpan.FromSeconds(5));
-            this.channel = await bootstrap.ConnectAsync(ip, port);
+            this.channel = await bootstrap.ConnectAsync(new IPEndPoint(IPAddress.Parse(ip), port));
         }
 
         public async void Stop()

@@ -1,5 +1,6 @@
 using NetWintun;
 using Rustun.Helpers;
+using Rustun.Lib;
 using Serilog;
 using System;
 using System.Buffers.Binary;
@@ -25,6 +26,7 @@ namespace Rustun.Services
         public Adapter? Adapter { get; private set; }
         public Guid? AdapterId { get; private set; }
         private Session? Session { get; set; }
+        private RustunClient? Client { get; set; }
 
         private VpnService() 
         { 
@@ -78,7 +80,13 @@ namespace Rustun.Services
             Log.Information($"Created adapter with name: {AdapterName}, id: {AdapterId}");
         }
 
-        public void start(string ip, string mask)
+        public void Connect(string ip, int port, string identity, string crypto, string secret)
+        {
+            Client = new RustunClient(ip, port, identity, crypto, secret);
+            Client.Start();
+        }
+
+        public void Start(string ip, string mask)
         {
             // 创建网卡
             CreateAdapter();
