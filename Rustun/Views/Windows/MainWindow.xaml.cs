@@ -134,10 +134,6 @@ namespace Rustun.Views.Windows
             {
                 return;
             }
-
-            var announcementText = navigationView.IsPaneOpen ? "Navigation Pane Opened" : "Navigation Pane Closed";
-
-            UIHelper.AnnounceActionForAccessibility(navigationView, announcementText, "NavigationViewPaneIsOpenChangeNotificationId");
         }
 
         private void RootGrid_Loaded(object sender, RoutedEventArgs e)

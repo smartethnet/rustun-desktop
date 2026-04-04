@@ -144,9 +144,6 @@ public sealed partial class SettingsPage : Page, INotifyPropertyChanged
         ThemeHelper.RootTheme = EnumHelper.GetEnum<ElementTheme>(selectedTheme);
         var elementThemeResolved = ThemeHelper.RootTheme == ElementTheme.Default ? ThemeHelper.ActualTheme : ThemeHelper.RootTheme;
         TitleBarHelper.ApplySystemThemeToCaptionButtons(window, elementThemeResolved);
-
-        // announce visual change to automation
-        UIHelper.AnnounceActionForAccessibility(senderUiLement, $"Theme changed to {elementThemeResolved}", "ThemeChangedNotificationActivityId");
     }
 
     private void navigationLocation_SelectionChanged(object sender, SelectionChangedEventArgs e)
