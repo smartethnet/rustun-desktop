@@ -157,7 +157,7 @@ public sealed partial class HomePage : Page, INotifyPropertyChanged
             }
             //string serverIp = SettingsHelper.Current.ServerIp;
             //string serverPort = SettingsHelper.Current.ServerPort;
-            //VpnService.Instance.Connect(serverIp, Convert.ToInt32(serverPort), identity, SettingsHelper.Current.EncryptionMode, SettingsHelper.Current.EncryptionSecret);
+            //await VpnService.Instance.ConnectAsync(serverIp, Convert.ToInt32(serverPort), identity, SettingsHelper.Current.EncryptionMode, SettingsHelper.Current.EncryptionSecret);
         }
         catch (Exception ex)
         {

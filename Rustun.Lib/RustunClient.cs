@@ -2,90 +2,101 @@ using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
 using Rustun.Lib.Crypto;
-using System;
-using System.Collections.Generic;
 using System.Net;
-using System.Text;
 
-namespace Rustun.Lib
+namespace Rustun.Lib;
+
+public class RustunClient
 {
-    public class RustunClient
+    private readonly string ip;
+    private readonly int port;
+    private readonly string identity;
+    private readonly string cryptoAlgorithm;
+    private readonly string secret;
+
+    private IChannel? channel;
+    private IEventLoopGroup? group;
+
+    public RustunClient(string ip, int port, string identity, string cryptoAlgorithm, string secret)
     {
-        private string ip;
-        private int port;
-        private string identity;
-        private string crypto;
-        private string secret;
+        this.ip = ip;
+        this.port = port;
+        this.identity = identity;
+        this.cryptoAlgorithm = cryptoAlgorithm;
+        this.secret = secret;
+    }
 
-        private IChannel? channel;
-        private IEventLoopGroup? group;
-
-        public RustunClient(string ip, int port, string identity, string crypto, string secret)
+    private RustunCrypto CreateCrypto() =>
+        cryptoAlgorithm.ToUpperInvariant() switch
         {
-            this.ip = ip;
-            this.port = port;
-            this.identity = identity;
-            this.crypto = crypto;
-            this.secret = secret;
+            "AES" => new RustunAes256Crypto(secret),
+            "XOR" => new RustunXorCrypto(secret),
+            "CHACHA20" => new RustunChacha20Crypto(secret),
+            _ => new RustunCrypto()
+        };
+
+    public async Task StartAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!IPAddress.TryParse(ip, out var address))
+        {
+            throw new FormatException($"Invalid IP address: '{ip}'.");
         }
 
-        private RustunCrypto GetRustunCrypto()
-        {
-            switch (crypto)
-            {
-                case "AES":
-                    return new RustunAes256Crypto(secret);
-                case "XOR":
-                    return new RustunXorCrypto(secret);
-                case "Chacha20":
-                    return new RustunChacha20Crypto(secret);
-                default:
-                    return new RustunCrypto();
-            }
-        }
+        var crypto = CreateCrypto();
+        group = new MultithreadEventLoopGroup();
 
-        public async void Start()
+        try
         {
-            // 配置加密器
-            var crypto = GetRustunCrypto();
-
-            // 配置Netty
-            this.group = new MultithreadEventLoopGroup();
             var bootstrap = new Bootstrap();
             bootstrap.Group(group)
                 .Channel<TcpSocketChannel>()
-                .Handler(new ActionChannelInitializer<IChannel>(channel =>
+                .Handler(new ActionChannelInitializer<IChannel>(ch =>
                 {
-                    var pipeline = channel.Pipeline;
-
-                    // 添加解码器和编码器
+                    var pipeline = ch.Pipeline;
                     pipeline.AddLast(new RustunPacketDecoder(crypto));
                     pipeline.AddLast(new RustunPacketEncoder(crypto));
-
-                    // 添加心跳处理器
                     pipeline.AddLast(new RustunHeartbeatClientHandler(identity));
-
-                    // 添加业务处理器
                 }));
 
-            // 连接服务器
             bootstrap.Option(ChannelOption.TcpNodelay, true);
             bootstrap.Option(ChannelOption.SoKeepalive, true);
             bootstrap.Option(ChannelOption.SoTimeout, 5000);
             bootstrap.Option(ChannelOption.ConnectTimeout, TimeSpan.FromSeconds(5));
-            this.channel = await bootstrap.ConnectAsync(new IPEndPoint(IPAddress.Parse(ip), port));
+
+            channel = await bootstrap.ConnectAsync(new IPEndPoint(address, port));
+        }
+        catch
+        {
+            await DisposeNetworkResourcesAsync();
+            throw;
+        }
+    }
+
+    public Task StopAsync() => DisposeNetworkResourcesAsync();
+
+    private async Task DisposeNetworkResourcesAsync()
+    {
+        var ch = channel;
+        channel = null;
+        if (ch != null)
+        {
+            try
+            {
+                await ch.CloseAsync();
+            }
+            catch
+            {
+                // 关闭阶段忽略异常，继续释放 EventLoopGroup
+            }
         }
 
-        public async void Stop()
+        var g = group;
+        group = null;
+        if (g != null)
         {
-            if (channel != null)
-            {
-                await channel.CloseAsync();
-            }
-            if (group != null)
-            {
-                await group.ShutdownGracefullyAsync();
-            }
+            await g.ShutdownGracefullyAsync();
         }
     }
 }

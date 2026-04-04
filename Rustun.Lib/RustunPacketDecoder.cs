@@ -3,18 +3,12 @@ using DotNetty.Codecs;
 using DotNetty.Transport.Channels;
 using Rustun.Lib.Crypto;
 using Rustun.Lib.Packet;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Rustun.Lib
 {
     public class RustunPacketDecoder : ByteToMessageDecoder
     {
-        private static readonly int HeaderLength = 8; // 假设包头长度为4字节
-        private static readonly int MaxPacketLength = 1024 * 1024; // 最大包长度为1MB
-        private static readonly uint MagicNumber = 0x91929394; // 魔数
-        private static readonly byte Version = 0x01; // 协议版本
+        private const int HeaderLength = 8;
         private bool closed = false;
 
         private RustunCrypto crypto;
@@ -42,7 +36,7 @@ namespace Rustun.Lib
             var magic = input.ReadUnsignedInt();
 
             // 验证魔数
-            if (magic != MagicNumber)
+            if (magic != RustunPacket.DefaultMagic)
             {
                 closed = true;
                 context.CloseAsync();
@@ -53,7 +47,7 @@ namespace Rustun.Lib
             var version = input.ReadByte();
 
             // 验证版本号
-            if (version != Version)
+            if (version != RustunPacket.DefaultVersion)
             {
                 closed = true;
                 context.CloseAsync();
@@ -63,16 +57,8 @@ namespace Rustun.Lib
             // 读取消息类型 (1 byte)
             var type = input.ReadByte();
 
-            // 读取数据长度 (2 bytes, 无符号)
+            // 读取数据长度 (2 bytes，最大 65535；协议头未预留更大长度字段)
             var length = input.ReadUnsignedShort();
-
-            // 检查最大长度限制，防止恶意攻击
-            if (length > MaxPacketLength)
-            {
-                closed = true;
-                context.CloseAsync();
-                throw new CorruptedFrameException($"Packet length {length} exceeds maximum {MaxPacketLength}");
-            }
 
             // 检查是否有足够的数据体
             if (input.ReadableBytes < length)

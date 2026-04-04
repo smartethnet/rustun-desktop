@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
+namespace Rustun.Lib.Message;
 
-namespace Rustun.Lib.Message
+public class DataMessage
 {
-    public class DataMessage
-    {
-        public required byte[] Data { get; set; }
-    }
+    public required byte[] Data { get; set; }
 }

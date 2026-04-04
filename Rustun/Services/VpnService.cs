@@ -80,10 +80,10 @@ namespace Rustun.Services
             Log.Information($"Created adapter with name: {AdapterName}, id: {AdapterId}");
         }
 
-        public void Connect(string ip, int port, string identity, string crypto, string secret)
+        public Task ConnectAsync(string ip, int port, string identity, string crypto, string secret)
         {
             Client = new RustunClient(ip, port, identity, crypto, secret);
-            Client.Start();
+            return Client.StartAsync();
         }
 
         public void Start(string ip, string mask)

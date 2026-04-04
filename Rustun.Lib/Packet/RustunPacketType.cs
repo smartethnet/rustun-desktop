@@ -1,16 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
+namespace Rustun.Lib.Packet;
 
-namespace Rustun.Lib.Packet
+public static class RustunPacketType
 {
-    public class RustunPacketType
-    {
-        public static byte Handshake = 0x01;
-        public static byte HandshakeAck = 0x04;
-        public static byte Data = 0x03;
-        public static byte Heartbeat = 0x02;
-        public static byte ProbeIpv6 = 0x06;
-        public static byte ProbeHolePunch = 0x07;
-    }
+    public const byte Handshake = 0x01;
+    public const byte HandshakeAck = 0x04;
+    public const byte Data = 0x03;
+    public const byte Heartbeat = 0x02;
+    public const byte ProbeIpv6 = 0x06;
+    public const byte ProbeHolePunch = 0x07;
 }

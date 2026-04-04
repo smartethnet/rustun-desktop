@@ -4,33 +4,40 @@ using DotNetty.Transport.Channels;
 using Rustun.Lib.Crypto;
 using Rustun.Lib.Packet;
 
-namespace Rustun.Lib
+namespace Rustun.Lib;
+
+public class RustunPacketEncoder : MessageToByteEncoder<RustunPacket>
 {
-    public class RustunPacketEncoder : MessageToByteEncoder<RustunPacket>
+    private readonly RustunCrypto crypto;
+
+    public RustunPacketEncoder(RustunCrypto crypto)
     {
+        this.crypto = crypto;
+    }
 
-        private RustunCrypto crypto;
+    protected override void Encode(IChannelHandlerContext context, RustunPacket message, IByteBuffer output)
+    {
+        // 与 BitConverter.GetBytes(uint) 在 little-endian 下一致，避免每次分配 4 字节数组
+        WriteUInt32LittleEndian(output, message.Magic);
+        output.WriteByte(message.Version);
+        output.WriteByte(message.Type);
 
-        public RustunPacketEncoder(RustunCrypto crypto)
+        var plain = message.Data ?? [];
+        var cipher = crypto.Encrypt(plain);
+        if (cipher.Length > ushort.MaxValue)
         {
-            this.crypto = crypto;
+            throw new EncoderException($"Encrypted payload length {cipher.Length} exceeds {ushort.MaxValue}.");
         }
 
-        protected override void Encode(IChannelHandlerContext context, RustunPacket message, IByteBuffer output)
-        {
-            // magic
-            output.WriteBytes(BitConverter.GetBytes(message.Magic));
-            // version
-            output.WriteByte(message.Version);
-            // type
-            output.WriteByte(message.Type);
-            // length
-            output.WriteUnsignedShort(message.Length);
-            // data
-            if (message.Data != null)
-            {
-                output.WriteBytes(crypto.Encrypt(message.Data));
-            }
-        }
+        output.WriteUnsignedShort((ushort)cipher.Length);
+        output.WriteBytes(cipher);
+    }
+
+    private static void WriteUInt32LittleEndian(IByteBuffer output, uint value)
+    {
+        output.WriteByte((byte)value);
+        output.WriteByte((byte)(value >> 8));
+        output.WriteByte((byte)(value >> 16));
+        output.WriteByte((byte)(value >> 24));
     }
 }

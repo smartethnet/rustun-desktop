@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -7,46 +6,66 @@ namespace Rustun.Lib.Crypto
 {
     public class RustunChacha20Crypto : RustunCrypto
     {
-        private Random random = new Random();
-        private static int KEYS_SIZE = 32;
-        private static int NONCE_SIZE = 12;
-        private static int TAG_SIZE = 16; // 128bit
+        private const int KeySize = 32;
+        private const int NonceSize = 12;
+        private const int TagSize = 16;
 
-        private byte[] keyBytes;
+        private readonly byte[] _keyBytes;
 
         public RustunChacha20Crypto(string secret)
         {
             var bytes = Encoding.UTF8.GetBytes(secret);
-            keyBytes = new byte[KEYS_SIZE];
-            if (bytes.Length >= KEYS_SIZE)
+            _keyBytes = new byte[KeySize];
+            if (bytes.Length >= KeySize)
             {
-                Buffer.BlockCopy(bytes, 0, keyBytes, 0, KEYS_SIZE);
+                Buffer.BlockCopy(bytes, 0, _keyBytes, 0, KeySize);
             }
             else
             {
-                Buffer.BlockCopy(bytes, 0, keyBytes, 0, bytes.Length);
-                for (int i = bytes.Length; i < KEYS_SIZE; i++)
-                {
-                    keyBytes[i] = 0;
-                }
+                Buffer.BlockCopy(bytes, 0, _keyBytes, 0, bytes.Length);
             }
         }
 
-        override public byte[] Encrypt(byte[] data)
+        public override byte[] Encrypt(byte[] data)
         {
-            // 生成 12 字节的随机 nonce（IV）
-            byte[] nonce = new byte[NONCE_SIZE];
-            random.NextBytes(nonce);
+            var nonce = new byte[NonceSize];
+            RandomNumberGenerator.Fill(nonce);
 
-            // 初始化加密器
-            byte[] tag = new byte[TAG_SIZE];
+            var ciphertext = new byte[data.Length];
+            var tag = new byte[TagSize];
 
-            return data;
+            using (var chacha = new ChaCha20Poly1305(_keyBytes))
+            {
+                chacha.Encrypt(nonce, data, ciphertext, tag);
+            }
+
+            // nonce + ciphertext + tag（与 Java Cipher.doFinal 输出一致）
+            var result = new byte[NonceSize + ciphertext.Length + tag.Length];
+            Buffer.BlockCopy(nonce, 0, result, 0, NonceSize);
+            Buffer.BlockCopy(ciphertext, 0, result, NonceSize, ciphertext.Length);
+            Buffer.BlockCopy(tag, 0, result, NonceSize + ciphertext.Length, tag.Length);
+            return result;
         }
 
-        override public byte[] Decrypt(byte[] data)
+        public override byte[] Decrypt(byte[] data)
         {
-            return data;
+            if (data.Length < NonceSize + TagSize)
+            {
+                throw new ArgumentException("data too short", nameof(data));
+            }
+
+            ReadOnlySpan<byte> span = data;
+            var nonce = span.Slice(0, NonceSize);
+            var ciphertext = span.Slice(NonceSize, data.Length - NonceSize - TagSize);
+            var tag = span.Slice(data.Length - TagSize, TagSize);
+
+            var plaintext = new byte[ciphertext.Length];
+            using (var chacha = new ChaCha20Poly1305(_keyBytes))
+            {
+                chacha.Decrypt(nonce, ciphertext, tag, plaintext);
+            }
+
+            return plaintext;
         }
     }
 }
