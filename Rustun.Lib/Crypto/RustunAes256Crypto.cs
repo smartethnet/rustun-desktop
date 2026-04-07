@@ -8,8 +8,7 @@ namespace Rustun.Lib.Crypto
     {
         private const int KeySize = 32;
         private const int NonceSize = 12;
-        private const int TagSizeBits = 128;
-        private const int TagSizeBytes = TagSizeBits / 8;
+        private const int TagSize = 16;
 
         private readonly byte[] _keyBytes;
 
@@ -33,35 +32,35 @@ namespace Rustun.Lib.Crypto
             RandomNumberGenerator.Fill(nonce);
 
             var ciphertext = new byte[data.Length];
-            var tag = new byte[TagSizeBytes];
+            var tag = new byte[TagSize];
 
-            using (var aes = new AesGcm(_keyBytes, TagSizeBits))
+            using (var aes = new AesGcm(_keyBytes, TagSize))
             {
                 aes.Encrypt(nonce, data, ciphertext, tag);
             }
 
-            // nonce + tag + ciphertext（保持与既有密文格式兼容）
-            var result = new byte[NonceSize + tag.Length + ciphertext.Length];
+            // nonce || ciphertext || tag — 与 Java Cipher.doFinal（密文 + 标签）拼接顺序一致
+            var result = new byte[NonceSize + ciphertext.Length + tag.Length];
             Buffer.BlockCopy(nonce, 0, result, 0, NonceSize);
-            Buffer.BlockCopy(tag, 0, result, NonceSize, tag.Length);
-            Buffer.BlockCopy(ciphertext, 0, result, NonceSize + tag.Length, ciphertext.Length);
+            Buffer.BlockCopy(ciphertext, 0, result, NonceSize, ciphertext.Length);
+            Buffer.BlockCopy(tag, 0, result, NonceSize + ciphertext.Length, tag.Length);
             return result;
         }
 
         public override byte[] Decrypt(byte[] data)
         {
-            if (data.Length < NonceSize + TagSizeBytes)
+            if (data.Length < NonceSize + TagSize)
             {
                 throw new ArgumentException("data too short", nameof(data));
             }
 
             ReadOnlySpan<byte> span = data;
             var nonce = span.Slice(0, NonceSize);
-            var tag = span.Slice(NonceSize, TagSizeBytes);
-            var ciphertext = span.Slice(NonceSize + TagSizeBytes);
+            var ciphertext = span.Slice(NonceSize, data.Length - NonceSize - TagSize);
+            var tag = span.Slice(data.Length - TagSize, TagSize);
 
             var plaintext = new byte[ciphertext.Length];
-            using (var aes = new AesGcm(_keyBytes, TagSizeBits))
+            using (var aes = new AesGcm(_keyBytes, TagSize))
             {
                 aes.Decrypt(nonce, ciphertext, tag, plaintext);
             }

@@ -2,6 +2,7 @@ using DotNetty.Handlers.Timeout;
 using DotNetty.Transport.Channels;
 using Rustun.Lib.Message;
 using Rustun.Lib.Packet;
+using Serilog;
 using System.Text;
 using System.Text.Json;
 
@@ -28,6 +29,7 @@ namespace Rustun.Lib
                 var data = JsonSerializer.Serialize(message);
                 var heartbeatPacket = new RustunPacket(RustunPacketType.Heartbeat, Encoding.UTF8.GetBytes(data));
                 context.WriteAndFlushAsync(heartbeatPacket);
+                Log.Debug("Sent heartbeat packet with identity: {Identity}", identity);
             }
         }
     }

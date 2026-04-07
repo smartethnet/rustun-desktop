@@ -1,13 +1,18 @@
+using DotNetty.Handlers.Timeout;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
 using Rustun.Lib.Crypto;
+using Rustun.Lib.Message;
+using Serilog;
 using System.Net;
 
 namespace Rustun.Lib;
 
 public class RustunClient
 {
+    public const int DefaultTimeout = 5000;
+
     private readonly string ip;
     private readonly int port;
     private readonly string identity;
@@ -16,6 +21,8 @@ public class RustunClient
 
     private IChannel? channel;
     private IEventLoopGroup? group;
+
+    public string Identity => identity;
 
     public RustunClient(string ip, int port, string identity, string cryptoAlgorithm, string secret)
     {
@@ -55,15 +62,22 @@ public class RustunClient
                 .Handler(new ActionChannelInitializer<IChannel>(ch =>
                 {
                     var pipeline = ch.Pipeline;
+                    // 添加编码解码器
                     pipeline.AddLast(new RustunPacketDecoder(crypto));
                     pipeline.AddLast(new RustunPacketEncoder(crypto));
+
+                    // 添加心跳检测
+                    pipeline.AddLast(new IdleStateHandler(0, 10, 0));
                     pipeline.AddLast(new RustunHeartbeatClientHandler(identity));
+
+                    // 添加客户端消息处理
+                    pipeline.AddLast(new RustunClientHandler(this));
                 }));
 
             bootstrap.Option(ChannelOption.TcpNodelay, true);
             bootstrap.Option(ChannelOption.SoKeepalive, true);
-            bootstrap.Option(ChannelOption.SoTimeout, 5000);
-            bootstrap.Option(ChannelOption.ConnectTimeout, TimeSpan.FromSeconds(5));
+            bootstrap.Option(ChannelOption.SoTimeout, DefaultTimeout);
+            bootstrap.Option(ChannelOption.ConnectTimeout, TimeSpan.FromMilliseconds(DefaultTimeout));
 
             channel = await bootstrap.ConnectAsync(new IPEndPoint(address, port));
         }
@@ -99,4 +113,24 @@ public class RustunClient
             await g.ShutdownGracefullyAsync();
         }
     }
+
+    public Task onConnected()
+    {
+        Log.Information($"Connect to server successful");
+        return Task.CompletedTask;
+    }
+
+    public Task onDisconnected()
+    {
+        Log.Information($"Disconnect from server");
+        return Task.CompletedTask;
+    }
+
+    public Task onError(Exception? error) => Task.CompletedTask;
+    public Task onDataMessage(byte[] data) => Task.CompletedTask;
+    public Task onHandshakeMessage(HandshakeMessage message) => Task.CompletedTask;
+    public Task onHandshakeReplyMessage(HandshakeReplyMessage message) => Task.CompletedTask;
+    public Task onKeepAliveMessage(KeepAliveMessage message) => Task.CompletedTask;
+    public Task onProbeHolePunchMessage(ProbeHolePunchMessage message) => Task.CompletedTask;
+    public Task onProbeIpv6Message(ProbeIpv6Message message) => Task.CompletedTask;
 }

@@ -8,6 +8,8 @@ namespace Rustun.Services
 {
     internal class LogService : INotifyPropertyChanged
     {
+        public const int MaxLogEntries = 10000;
+
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
@@ -39,7 +41,7 @@ namespace Rustun.Services
                 LogEntries.Add(logEntry);
 
                 // 限制日志数量，避免内存泄漏
-                if (LogEntries.Count > 1000)
+                while (LogEntries.Count > MaxLogEntries)
                 {
                     LogEntries.RemoveAt(0);
                 }

@@ -3,6 +3,7 @@ using DotNetty.Codecs;
 using DotNetty.Transport.Channels;
 using Rustun.Lib.Crypto;
 using Rustun.Lib.Packet;
+using Serilog;
 
 namespace Rustun.Lib;
 
@@ -17,8 +18,7 @@ public class RustunPacketEncoder : MessageToByteEncoder<RustunPacket>
 
     protected override void Encode(IChannelHandlerContext context, RustunPacket message, IByteBuffer output)
     {
-        // 与 BitConverter.GetBytes(uint) 在 little-endian 下一致，避免每次分配 4 字节数组
-        WriteUInt32LittleEndian(output, message.Magic);
+        WriteUInt32(output, message.Magic);
         output.WriteByte(message.Version);
         output.WriteByte(message.Type);
 
@@ -31,13 +31,15 @@ public class RustunPacketEncoder : MessageToByteEncoder<RustunPacket>
 
         output.WriteUnsignedShort((ushort)cipher.Length);
         output.WriteBytes(cipher);
+        Log.Debug("Encoded packet: Magic={Magic}, Version={Version}, Type={Type}, Length={Length}, Data={Data}",
+            message.Magic, message.Version, message.Type, cipher.Length, BitConverter.ToString(cipher));
     }
 
-    private static void WriteUInt32LittleEndian(IByteBuffer output, uint value)
+    private static void WriteUInt32(IByteBuffer output, uint value)
     {
-        output.WriteByte((byte)value);
-        output.WriteByte((byte)(value >> 8));
-        output.WriteByte((byte)(value >> 16));
         output.WriteByte((byte)(value >> 24));
+        output.WriteByte((byte)(value >> 16));
+        output.WriteByte((byte)(value >> 8));
+        output.WriteByte((byte)value);
     }
 }

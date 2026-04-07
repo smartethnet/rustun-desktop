@@ -116,48 +116,9 @@ public sealed partial class HomePage : Page, INotifyPropertyChanged
                 return;
             }
 
-            // 获取应用程序所在目录
-            var appFolder = Directory.GetCurrentDirectory();
-            var exePath = Path.Combine(appFolder, "client.exe");
-
-            if (!File.Exists(exePath))
-            {
-                ShowNotification("找不到 client.exe 文件");
-                return;
-            }
-
-            var identity = SettingsHelper.Current.Identity;
-            var serverUrl = $"{SettingsHelper.Current.ServerIp}:{SettingsHelper.Current.ServerPort}";
-            var crypto = "plain";
-            switch (SettingsHelper.Current.EncryptionMode)
-            {
-                case "Chacha20":
-                    crypto = "chacha20:" + SettingsHelper.Current.EncryptionSecret;
-                    break;
-                case "AES":
-                    crypto = "aes256:" + SettingsHelper.Current.EncryptionSecret;
-                    break;
-                case "XOR":
-                    crypto = "xor:" + SettingsHelper.Current.EncryptionSecret;
-                    break;
-                default:
-                    crypto = "plain";
-                    break;
-            }
-            var success = await _processService.StartClientProcess(exePath, $"--server {serverUrl} --identity {identity} --crypto {crypto}");
-            if (success)
-            {
-                IsProcessRunning = true;
-                ShowNotification("启动成功", false);
-            }
-            else
-            {
-                ShowNotification("启动失败");
-                IsProcessRunning = false;
-            }
-            //string serverIp = SettingsHelper.Current.ServerIp;
-            //string serverPort = SettingsHelper.Current.ServerPort;
-            //await VpnService.Instance.ConnectAsync(serverIp, Convert.ToInt32(serverPort), identity, SettingsHelper.Current.EncryptionMode, SettingsHelper.Current.EncryptionSecret);
+            string serverIp = SettingsHelper.Current.ServerIp;
+            string serverPort = SettingsHelper.Current.ServerPort;
+            await VpnService.Instance.ConnectAsync(serverIp, Convert.ToInt32(serverPort), identity, SettingsHelper.Current.EncryptionMode, SettingsHelper.Current.EncryptionSecret);
         }
         catch (Exception ex)
         {
