@@ -2,11 +2,10 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Rustun.Helpers;
 using Rustun.Services;
+using Serilog;
 using System;
 using System.ComponentModel;
-using System.IO;
 using System.Runtime.CompilerServices;
-using Windows.ApplicationModel;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -25,24 +24,13 @@ public sealed partial class HomePage : Page, INotifyPropertyChanged
     }
 
     private readonly LogService _logService;
-    private readonly ProcessService _processService;
 
     public HomePage()
     {
         InitializeComponent();
 
         _logService = LogService.Instance;
-        _processService = ProcessService.Instance;
-        _processService.OutputReceived += OnOutputReceived;
-        _processService.ProcessExited += OnProcessExited;
-        if (_processService.IsProcessRunning())
-        {
-            IsProcessRunning = true;
-        }
-        else
-        {
-            statusText.Text = "状态: 已停止";
-        }
+        statusText.Text = "状态: 已停止";
     }
 
     private string serverUrl
@@ -81,7 +69,7 @@ public sealed partial class HomePage : Page, INotifyPropertyChanged
 
     public bool IsProcessRunning
     {
-        get => _processService.IsProcessRunning();
+        get => false;
         set
         {
             statusText.Text = value ? "状态: 运行中" : "状态: 已停止";
@@ -93,7 +81,7 @@ public sealed partial class HomePage : Page, INotifyPropertyChanged
     {
         if (sender is ToggleSwitch toggleSwitch)
         {
-            if (!_processService.IsProcessRunning() && toggleSwitch.IsOn)
+            if (!IsProcessRunning && toggleSwitch.IsOn)
             {
                 Loading = true;
                 connect();
@@ -110,20 +98,28 @@ public sealed partial class HomePage : Page, INotifyPropertyChanged
     {
         try
         {
-            if (_processService.IsProcessRunning())
+            if (IsProcessRunning)
             {
-                ShowNotification("客户端已在运行");
                 return;
             }
 
             string serverIp = SettingsHelper.Current.ServerIp;
             string serverPort = SettingsHelper.Current.ServerPort;
-            await VpnService.Instance.ConnectAsync(serverIp, Convert.ToInt32(serverPort), identity, SettingsHelper.Current.EncryptionMode, SettingsHelper.Current.EncryptionSecret);
+            await VpnService.Instance.ConnectAsync(serverIp, Convert.ToInt32(serverPort) + 1, identity, SettingsHelper.Current.EncryptionMode, SettingsHelper.Current.EncryptionSecret);
         }
         catch (Exception ex)
         {
-            ShowNotification($"启动失败: {ex.Message}");
+            Log.Error(ex, $"启动失败");
             IsProcessRunning = false;
+
+            ContentDialog errorDialog = new ContentDialog
+            {
+                Title = "启动失败",
+                Content = $"无法连接到服务器: {ex.Message}",
+                CloseButtonText = "关闭",
+                XamlRoot = this.XamlRoot
+            };
+            await errorDialog.ShowAsync();
         }
         finally
         {
@@ -133,9 +129,8 @@ public sealed partial class HomePage : Page, INotifyPropertyChanged
 
     private async void disconnect()
     {
-        if (_processService.IsProcessRunning())
+        if (IsProcessRunning)
         {
-            _processService.StopClientProcess();
             ShowNotification("已停止", false);
         }
     }
@@ -164,7 +159,5 @@ public sealed partial class HomePage : Page, INotifyPropertyChanged
     private void Page_Unloaded(object? sender, RoutedEventArgs e)
     {
         // 清理事件订阅
-        _processService.ProcessExited -= OnProcessExited;
-        _processService.OutputReceived -= OnOutputReceived;
     }
 }

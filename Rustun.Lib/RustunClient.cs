@@ -11,7 +11,7 @@ namespace Rustun.Lib;
 
 public class RustunClient
 {
-    public const int DefaultTimeout = 5000;
+    public const int DefaultTimeout = 3000;
 
     private readonly string ip;
     private readonly int port;
@@ -20,7 +20,7 @@ public class RustunClient
     private readonly string secret;
 
     private IChannel? channel;
-    private IEventLoopGroup? group;
+    private static IEventLoopGroup group = new MultithreadEventLoopGroup();
 
     public string Identity => identity;
 
@@ -52,10 +52,10 @@ public class RustunClient
         }
 
         var crypto = CreateCrypto();
-        group = new MultithreadEventLoopGroup();
 
         try
         {
+            // 配置客户端 Bootstrap
             var bootstrap = new Bootstrap();
             bootstrap.Group(group)
                 .Channel<TcpSocketChannel>()
@@ -74,16 +74,21 @@ public class RustunClient
                     pipeline.AddLast(new RustunClientHandler(this));
                 }));
 
+            // 设置 TCP 选项
             bootstrap.Option(ChannelOption.TcpNodelay, true);
             bootstrap.Option(ChannelOption.SoKeepalive, true);
             bootstrap.Option(ChannelOption.SoTimeout, DefaultTimeout);
             bootstrap.Option(ChannelOption.ConnectTimeout, TimeSpan.FromMilliseconds(DefaultTimeout));
 
+            // 连接服务器
             channel = await bootstrap.ConnectAsync(new IPEndPoint(address, port));
         }
         catch
         {
+            // 连接失败时确保资源被正确释放
             await DisposeNetworkResourcesAsync();
+
+            // 重新抛出异常以通知调用者
             throw;
         }
     }
@@ -105,13 +110,6 @@ public class RustunClient
                 // 关闭阶段忽略异常，继续释放 EventLoopGroup
             }
         }
-
-        var g = group;
-        group = null;
-        if (g != null)
-        {
-            await g.ShutdownGracefullyAsync();
-        }
     }
 
     public Task onConnected()
@@ -126,11 +124,45 @@ public class RustunClient
         return Task.CompletedTask;
     }
 
-    public Task onError(Exception? error) => Task.CompletedTask;
-    public Task onDataMessage(byte[] data) => Task.CompletedTask;
-    public Task onHandshakeMessage(HandshakeMessage message) => Task.CompletedTask;
-    public Task onHandshakeReplyMessage(HandshakeReplyMessage message) => Task.CompletedTask;
-    public Task onKeepAliveMessage(KeepAliveMessage message) => Task.CompletedTask;
-    public Task onProbeHolePunchMessage(ProbeHolePunchMessage message) => Task.CompletedTask;
-    public Task onProbeIpv6Message(ProbeIpv6Message message) => Task.CompletedTask;
+    public Task onError(Exception? error)
+    {
+        Log.Error($"An error occurred in RustunClient: {error?.Message}");
+        return Task.CompletedTask;
+    }
+
+    public Task onDataMessage(byte[] data)
+    {
+        Log.Information($"Received data message: {data.Length} bytes");
+        return Task.CompletedTask;
+    }
+
+    public Task onHandshakeMessage(HandshakeMessage message)
+    {
+        Log.Information($"Received handshake message: Identity={message.Identity}");
+        return Task.CompletedTask;
+    }
+
+    public Task onHandshakeReplyMessage(HandshakeReplyMessage message)
+    {
+        Log.Information($"Received handshake reply message: PrivateIp={message.PrivateIp}, Mask={message.Mask}, Gateway={message.Gateway} PeerDetails={message.PeerDetails}");
+        return Task.CompletedTask;
+    }
+
+    public Task onKeepAliveMessage(KeepAliveMessage message)
+    {
+        Log.Information($"Received keep-alive message: Identity={message.Identity}, Ipv6={message.Ipv6}, Port={message.Port}, StunIp={message.StunIp}, StunPort={message.StunPort}, PeerDetails={message.PeerDetails}");
+        return Task.CompletedTask;
+    }
+
+    public Task onProbeHolePunchMessage(ProbeHolePunchMessage message)
+    {
+        Log.Information($"Received probe hole punch message: Identity={message.Identity}");
+        return Task.CompletedTask;
+    }
+
+    public Task onProbeIpv6Message(ProbeIpv6Message message)
+    {
+        Log.Information($"Received probe IPv6 message: Identity={message.Identity}");
+        return Task.CompletedTask;
+    }
 }

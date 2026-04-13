@@ -12,19 +12,13 @@ namespace Rustun.Views.Pages;
 /// </summary>
 public sealed partial class LogPage : Page
 {
-    private readonly ProcessService _processService;
     private readonly LogService _logService;
-
 
     public LogPage()
     {
         InitializeComponent();
 
-        _processService = ProcessService.Instance;
         _logService = LogService.Instance;
-
-        // 订阅进程输出事件
-        _processService.OutputReceived += OnOutputReceived;
 
         // 订阅日志集合变化事件，实现自动滚动
         _logService.PropertyChanged += OnLogsChanged;
@@ -53,7 +47,6 @@ public sealed partial class LogPage : Page
     private void Page_Unloaded(object? sender, RoutedEventArgs e)
     {
         // 清理事件订阅
-        _processService.OutputReceived -= OnOutputReceived;
         _logService.PropertyChanged -= OnLogsChanged;
     }
 

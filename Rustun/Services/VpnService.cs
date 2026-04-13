@@ -1,17 +1,9 @@
 using NetWintun;
-using Rustun.Helpers;
 using Rustun.Lib;
 using Serilog;
 using System;
-using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.Linq;
 using System.Management;
-using System.Net;
-using System.Text;
 using System.Threading.Tasks;
-using Windows.Win32.NetworkManagement.Ndis;
-using static Vanara.PInvoke.IpHlpApi;
 
 namespace Rustun.Services
 {
@@ -28,9 +20,9 @@ namespace Rustun.Services
         private Session? Session { get; set; }
         private RustunClient? Client { get; set; }
 
-        private VpnService() 
-        { 
-        
+        private VpnService()
+        {
+
         }
 
         private void SetIpAddressByWmic(string uuid, string ip, string mask)
@@ -80,10 +72,10 @@ namespace Rustun.Services
             Log.Information($"Created adapter with name: {AdapterName}, id: {AdapterId}");
         }
 
-        public Task ConnectAsync(string ip, int port, string identity, string crypto, string secret)
+        public async Task ConnectAsync(string ip, int port, string identity, string crypto, string secret)
         {
             Client = new RustunClient(ip, port, identity, crypto, secret);
-            return Client.StartAsync();
+            await Client.StartAsync();
         }
 
         public void Start(string ip, string mask)
