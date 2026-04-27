@@ -33,6 +33,10 @@ public class RustunClient
     private Guid? AdapterId;
     private Session? Session;
 
+    public event EventHandler? OnConnected;
+    public event EventHandler? OnDisconnected;
+    public event EventHandler<Exception?>? OnError;
+
     public string Identity => identity;
 
     public RustunClient(string ip, int port, string identity, string cryptoAlgorithm, string secret)
@@ -135,6 +139,9 @@ public class RustunClient
 
             // 开始转发网卡流量到服务器
             transferTraffic();
+
+            // 触发连接成功事件
+            OnConnected?.Invoke(this, EventArgs.Empty);
         }
         catch
         {
@@ -383,6 +390,9 @@ public class RustunClient
         // 释放网络资源
         Log.Information($"Disconnect from server");
         await DisposeNetworkResourcesAsync();
+
+        // 触发断开连接事件
+        OnDisconnected?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -394,6 +404,9 @@ public class RustunClient
     {
         _ = handshakeAckCompletion?.TrySetException(error ?? new InvalidOperationException("Unknown error."));
         Log.Error($"An error occurred in RustunClient: {error?.Message}");
+
+        // 触发错误事件
+        OnError?.Invoke(this, error);
         return Task.CompletedTask;
     }
 

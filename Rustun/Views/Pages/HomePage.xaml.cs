@@ -80,7 +80,5 @@ public sealed partial class HomePage : Page
 
     private void Page_Unloaded(object? sender, RoutedEventArgs e)
     {
-        // 清理事件订阅
-        viewModel.OnPageUnloaded();
     }
 }

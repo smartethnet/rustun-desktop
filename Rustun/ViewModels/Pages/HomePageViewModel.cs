@@ -2,13 +2,11 @@ using Rustun.Helpers;
 using Rustun.Services;
 using Serilog;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Rustun.ViewModels.Pages
 {
-    public class HomePageViewModel : ViewModelBase
+    public class HomePageViewModel : ViewModelBase, IDisposable
     {
         public string ServerUrl
         {
@@ -61,6 +59,20 @@ namespace Rustun.ViewModels.Pages
         public HomePageViewModel()
         {
             SettingsHelper.Current.PropertyChanged += handleSettingsPropertyChanged;
+            VpnService.Instance.OnConnected += handleVpnConnected;
+            VpnService.Instance.OnDisconnected += handleVpnDisconnected;
+
+            IsConnected = VpnService.Instance.IsConnected;
+        }
+
+        private void handleVpnDisconnected(object? sender, EventArgs e)
+        {
+            IsConnected = false;
+        }
+
+        private void handleVpnConnected(object? sender, EventArgs e)
+        {
+            IsConnected = true;
         }
 
         private void handleSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -71,11 +83,6 @@ namespace Rustun.ViewModels.Pages
                 OnPropertyChanged(nameof(Identity));
                 OnPropertyChanged(nameof(IsServerInfoSet));
             }
-        }
-
-        public void OnPageUnloaded()
-        {
-            SettingsHelper.Current.PropertyChanged -= handleSettingsPropertyChanged;
         }
 
         public async Task Start()
@@ -93,7 +100,6 @@ namespace Rustun.ViewModels.Pages
                 string serverPort = SettingsHelper.Current.ServerPort;
                 string identity = SettingsHelper.Current.Identity;
                 await VpnService.Instance.ConnectAsync(serverIp, Convert.ToInt32(serverPort), identity, SettingsHelper.Current.EncryptionMode, SettingsHelper.Current.EncryptionSecret);
-                IsConnected = true;
             }
             catch
             {
@@ -122,8 +128,14 @@ namespace Rustun.ViewModels.Pages
             finally
             {
                 Loading = false;
-                IsConnected = false;
             }
+        }
+
+        public void Dispose()
+        {
+            SettingsHelper.Current.PropertyChanged -= handleSettingsPropertyChanged;
+            VpnService.Instance.OnConnected -= handleVpnConnected;
+            VpnService.Instance.OnDisconnected -= handleVpnDisconnected;
         }
     }
 }
