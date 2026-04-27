@@ -2,86 +2,138 @@ using DotNetty.Handlers.Timeout;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
+using NetWintun;
 using Rustun.Lib.Crypto;
 using Rustun.Lib.Message;
 using Serilog;
+using System.Management;
 using System.Net;
 
 namespace Rustun.Lib;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:验证平台兼容性", Justification = "<挂起>")]
 public class RustunClient
 {
     public const int DefaultTimeout = 3000;
+    public const string AdapterName = "Rustun";
+    public const string TunnelType = "Wintun";
 
-    private readonly string ip;
+    private readonly IPAddress address;
     private readonly int port;
     private readonly string identity;
-    private readonly string cryptoAlgorithm;
-    private readonly string secret;
+    private readonly RustunCrypto crypto;
 
     private IChannel? channel;
+    private TaskCompletionSource<HandshakeReplyMessage>? handshakeAckCompletion;
+    private CancellationTokenSource? handshakeStopCts;
     private static IEventLoopGroup group = new MultithreadEventLoopGroup();
+
+    private Adapter? Adapter;
+    private Guid? AdapterId;
+    private Session? Session;
 
     public string Identity => identity;
 
     public RustunClient(string ip, int port, string identity, string cryptoAlgorithm, string secret)
     {
-        this.ip = ip;
         this.port = port;
+        if (!IPAddress.TryParse(ip, out var address))
+        {
+            throw new FormatException($"Invalid IP address: '{ip}'.");
+        }
+        this.address = address;
         this.identity = identity;
-        this.cryptoAlgorithm = cryptoAlgorithm;
-        this.secret = secret;
-    }
 
-    private RustunCrypto CreateCrypto() =>
-        cryptoAlgorithm.ToUpperInvariant() switch
+        // 初始化加密算法
+        this.crypto = cryptoAlgorithm.ToUpperInvariant() switch
         {
             "AES" => new RustunAes256Crypto(secret),
             "XOR" => new RustunXorCrypto(secret),
             "CHACHA20" => new RustunChacha20Crypto(secret),
             _ => new RustunCrypto()
         };
+    }
 
-    public async Task StartAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// 连接服务器
+    /// </summary>
+    /// <param name="address"></param>
+    /// <param name="port"></param>
+    /// <param name="crypto"></param>
+    /// <returns></returns>
+    private async Task<IChannel> connectServerAsync(IPAddress address, int port, RustunCrypto crypto)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        // 配置客户端 Bootstrap
+        var bootstrap = new Bootstrap();
+        bootstrap.Group(group)
+            .Channel<TcpSocketChannel>()
+            .Handler(new ActionChannelInitializer<IChannel>(ch =>
+            {
+                var pipeline = ch.Pipeline;
+                // 添加编码解码器
+                pipeline.AddLast(new RustunPacketDecoder(crypto));
+                pipeline.AddLast(new RustunPacketEncoder(crypto));
 
-        if (!IPAddress.TryParse(ip, out var address))
-        {
-            throw new FormatException($"Invalid IP address: '{ip}'.");
-        }
+                // 添加心跳检测
+                pipeline.AddLast(new IdleStateHandler(0, 10, 0));
+                pipeline.AddLast(new RustunHeartbeatClientHandler(identity));
 
-        var crypto = CreateCrypto();
+                // 添加客户端消息处理
+                pipeline.AddLast(new RustunClientHandler(this));
+            }));
+
+        // 设置 TCP 选项
+        bootstrap.Option(ChannelOption.TcpNodelay, true);
+        bootstrap.Option(ChannelOption.SoKeepalive, true);
+        bootstrap.Option(ChannelOption.SoTimeout, DefaultTimeout);
+        bootstrap.Option(ChannelOption.ConnectTimeout, TimeSpan.FromMilliseconds(DefaultTimeout));
+
+        // 连接服务器
+        return await bootstrap.ConnectAsync(new IPEndPoint(address, port));
+    }
+
+    /// <summary>
+    /// 启动
+    /// </summary>
+    /// <returns></returns>
+    public async Task StartAsync()
+    {
+        // 创建握手响应完成源
+        handshakeAckCompletion = new TaskCompletionSource<HandshakeReplyMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         try
         {
-            // 配置客户端 Bootstrap
-            var bootstrap = new Bootstrap();
-            bootstrap.Group(group)
-                .Channel<TcpSocketChannel>()
-                .Handler(new ActionChannelInitializer<IChannel>(ch =>
-                {
-                    var pipeline = ch.Pipeline;
-                    // 添加编码解码器
-                    pipeline.AddLast(new RustunPacketDecoder(crypto));
-                    pipeline.AddLast(new RustunPacketEncoder(crypto));
-
-                    // 添加心跳检测
-                    pipeline.AddLast(new IdleStateHandler(0, 10, 0));
-                    pipeline.AddLast(new RustunHeartbeatClientHandler(identity));
-
-                    // 添加客户端消息处理
-                    pipeline.AddLast(new RustunClientHandler(this));
-                }));
-
-            // 设置 TCP 选项
-            bootstrap.Option(ChannelOption.TcpNodelay, true);
-            bootstrap.Option(ChannelOption.SoKeepalive, true);
-            bootstrap.Option(ChannelOption.SoTimeout, DefaultTimeout);
-            bootstrap.Option(ChannelOption.ConnectTimeout, TimeSpan.FromMilliseconds(DefaultTimeout));
-
             // 连接服务器
-            channel = await bootstrap.ConnectAsync(new IPEndPoint(address, port));
+            channel = await connectServerAsync(address, port, crypto);
+
+            // 等待握手响应（StopAsync 可通过 handshakeStopCts 取消此等待）
+            handshakeStopCts = new CancellationTokenSource();
+            handshakeStopCts.CancelAfter(DefaultTimeout);
+            HandshakeReplyMessage response;
+            try
+            {
+                response = await handshakeAckCompletion.Task.WaitAsync(handshakeStopCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                if (handshakeStopCts.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException("Handshake wait was cancelled by StopAsync.");
+                }
+
+                throw new TimeoutException($"Handshake acknowledgment timed out after {DefaultTimeout} ms.");
+            }
+
+            // 创建虚拟网卡
+            createVirtualNetworkAdapter();
+
+            // Config adapter network
+            var interfaceId = AdapterId?.ToString() ?? throw new InvalidOperationException("Adapter ID is null after creation.");
+            setVirtualNetworkAdapterIpAddress(interfaceId, response.PrivateIp, response.Mask);
+            setVirtualNetworkAdapterGateway(interfaceId, response.Gateway);
+
+            // 开始转发网卡流量到服务器
+            transferTraffic();
         }
         catch
         {
@@ -91,12 +143,170 @@ public class RustunClient
             // 重新抛出异常以通知调用者
             throw;
         }
+        finally
+        {
+            handshakeStopCts?.Dispose();
+            handshakeStopCts = null;
+            handshakeAckCompletion = null;
+        }
     }
 
-    public Task StopAsync() => DisposeNetworkResourcesAsync();
+    /// <summary>
+    /// 停止
+    /// </summary>
+    /// <returns></returns>
+    public async Task StopAsync()
+    {
+        Log.Information($"Stopping RustunClient...");
+        handshakeStopCts?.Cancel();
+        await DisposeNetworkResourcesAsync();
+        Log.Information($"RustunClient stopped.");
+    }
 
+    /// <summary>
+    /// 转发网卡流量到服务端
+    /// </summary>
+    private void transferTraffic()
+    {
+        // 监听网卡流量并转发到服务器
+        if (Session == null || channel == null)
+        {
+            Log.Warning($"Cannot transfer traffic: Session or channel is not initialized.");
+            return;
+        }
+        Task.Run(async () =>
+        {
+            try
+            {
+                while (Session != null && channel != null && channel.Active)
+                {
+                    var packet = await Session.ReceivePacketAsync();
+                    if (packet != null)
+                    {
+                        await channel.WriteAndFlushAsync(packet);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Error in traffic transfer loop: {ex.Message}");
+            }
+        });
+    }
+
+    /// <summary>
+    /// 创建虚拟网卡和会话
+    /// </summary>
+    private void createVirtualNetworkAdapter()
+    {
+        // 创建网卡
+        AdapterId = Guid.NewGuid();
+        Adapter = Adapter.Create(AdapterName, TunnelType, AdapterId);
+        Log.Information($"Created adapter with name: {AdapterName}, id: {AdapterId}");
+
+        // 创建会话
+        Session = Adapter.StartSession(Wintun.Constants.MaxRingCapacity);
+        Log.Information($"Started session on adapter {AdapterName}");
+    }
+
+    /// <summary>
+    /// 设置虚拟网卡的 IP 地址和子网掩码
+    /// </summary>
+    /// <param name="uuid"></param>
+    /// <param name="ip"></param>
+    /// <param name="mask"></param>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="Exception"></exception>
+    private void setVirtualNetworkAdapterIpAddress(string uuid, string ip, string mask)
+    {
+        // 获取所有网络适配器配置
+        ManagementClass mc = new ManagementClass("Win32_NetworkAdapterConfiguration");
+        ManagementObjectCollection adapters = mc.GetInstances();
+        foreach (ManagementObject item in adapters)
+        {
+            var objectSettingId = item["SettingID"];
+            if (objectSettingId is string settingId)
+            {
+                string adapterId = "{" + uuid.ToUpper() + "}";
+                if (settingId == adapterId)
+                {
+                    var newIP = item.GetMethodParameters("EnableStatic");
+                    if (newIP == null)
+                    {
+                        throw new InvalidOperationException("EnableStatic method not found on adapter configuration.");
+                    }
+
+                    newIP["IPAddress"] = new string[] { ip ?? throw new ArgumentNullException(nameof(ip)) };
+                    newIP["SubnetMask"] = new string[] { mask ?? throw new ArgumentNullException(nameof(mask)) };
+
+                    var result = item.InvokeMethod("EnableStatic", newIP, null);
+                    if (result == null)
+                    {
+                        throw new InvalidOperationException("EnableStatic invocation returned null.");
+                    }
+
+                    var returnObj = result["returnvalue"];
+                    int returnValue = Convert.ToInt32(returnObj ?? 0);
+                    if (returnValue != 0 && returnValue != 1)
+                    {
+                        throw new Exception("Set IP address and subnet mask error: " + returnValue);
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 设置虚拟网卡网关地址
+    /// </summary>
+    /// <param name="uuid"></param>
+    /// <param name="gateway"></param>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="Exception"></exception>
+    private void setVirtualNetworkAdapterGateway(string uuid, string gateway)
+    {
+        // 获取所有网络适配器配置
+        ManagementClass mc = new ManagementClass("Win32_NetworkAdapterConfiguration");
+        ManagementObjectCollection adapters = mc.GetInstances();
+        foreach (ManagementObject item in adapters)
+        {
+            var objectSettingId = item["SettingID"];
+            if (objectSettingId is string settingId)
+            {
+                string adapterId = "{" + uuid.ToUpper() + "}";
+                if (settingId == adapterId)
+                {
+                    var newGateway = item.GetMethodParameters("SetGateways");
+                    if (newGateway == null)
+                    {
+                        throw new InvalidOperationException("SetGateways method not found on adapter configuration.");
+                    }
+                    newGateway["DefaultIPGateway"] = new string[] { gateway ?? throw new ArgumentNullException(nameof(gateway)) };
+                    var result = item.InvokeMethod("SetGateways", newGateway, null);
+                    if (result == null)
+                    {
+                        throw new InvalidOperationException("SetGateways invocation returned null.");
+                    }
+                    var returnObj = result["returnvalue"];
+                    int returnValue = Convert.ToInt32(returnObj ?? 0);
+                    if (returnValue != 0 && returnValue != 1)
+                    {
+                        throw new Exception("Set gateway error: " + returnValue);
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 释放资源
+    /// </summary>
+    /// <returns></returns>
     private async Task DisposeNetworkResourcesAsync()
     {
+        // 关闭网络连接
         var ch = channel;
         channel = null;
         if (ch != null)
@@ -110,59 +320,143 @@ public class RustunClient
                 // 关闭阶段忽略异常，继续释放 EventLoopGroup
             }
         }
+
+        if (Session != null)
+        {
+            try
+            {
+                Session.Dispose();
+                Log.Information($"Session disposed.");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Error disposing session: {ex.Message}");
+            }
+            finally
+            {
+                Session = null;
+            }
+        }
+
+        // 注意：EventLoopGroup 是共享的，不在这里关闭
+        if (Adapter != null)
+        {
+            try
+            {
+                Adapter.Dispose();
+                Log.Information($"Adapter disposed.");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Error disposing adapter: {ex.Message}");
+            }
+            finally
+            {
+                Adapter = null;
+                AdapterId = null;
+            }
+        }
     }
 
+    /// <summary>
+    /// 连接服务器成功
+    /// </summary>
+    /// <returns></returns>
     public Task onConnected()
     {
         Log.Information($"Connect to server successful");
         return Task.CompletedTask;
     }
 
-    public Task onDisconnected()
+    /// <summary>
+    /// 与服务器断开连接
+    /// </summary>
+    /// <returns></returns>
+    public async Task onDisconnected()
     {
+        // 如果在断开连接时握手尚未完成，设置异常以通知等待的 StartAsync 调用
+        _ = handshakeAckCompletion?.TrySetException(
+            new InvalidOperationException("Disconnected before handshake acknowledgment was received."));
+
+        // 释放网络资源
         Log.Information($"Disconnect from server");
-        return Task.CompletedTask;
+        await DisposeNetworkResourcesAsync();
     }
 
+    /// <summary>
+    /// 发生了错误
+    /// </summary>
+    /// <param name="error"></param>
+    /// <returns></returns>
     public Task onError(Exception? error)
     {
+        _ = handshakeAckCompletion?.TrySetException(error ?? new InvalidOperationException("Unknown error."));
         Log.Error($"An error occurred in RustunClient: {error?.Message}");
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 收到从服务器发送过来的数据包
+    /// </summary>
+    /// <param name="data"></param>
+    /// <returns></returns>
     public Task onDataMessage(byte[] data)
     {
-        Log.Information($"Received data message: {data.Length} bytes");
+        if (Session != null)
+        {
+            Session.SendPacket(data);
+        }
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 收到握手消息，客户端无需处理握手消息，直接返回即可，握手响应会通过 onHandshakeReplyMessage 方法返回
+    /// </summary>
+    /// <param name="message"></param>
+    /// <returns></returns>
     public Task onHandshakeMessage(HandshakeMessage message)
     {
-        Log.Information($"Received handshake message: Identity={message.Identity}");
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 收到握手确认消息，设置握手响应完成源的结果以通知 StartAsync 方法继续执行后续步骤（如创建虚拟网卡和开始转发流量）
+    /// </summary>
+    /// <param name="message"></param>
+    /// <returns></returns>
     public Task onHandshakeReplyMessage(HandshakeReplyMessage message)
     {
-        Log.Information($"Received handshake reply message: PrivateIp={message.PrivateIp}, Mask={message.Mask}, Gateway={message.Gateway} PeerDetails={message.PeerDetails}");
+        _ = handshakeAckCompletion?.TrySetResult(message);
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 收到心跳消息
+    /// </summary>
+    /// <param name="message"></param>
+    /// <returns></returns>
     public Task onKeepAliveMessage(KeepAliveMessage message)
     {
-        Log.Information($"Received keep-alive message: Identity={message.Identity}, Ipv6={message.Ipv6}, Port={message.Port}, StunIp={message.StunIp}, StunPort={message.StunPort}, PeerDetails={message.PeerDetails}");
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 收到ProbeHolePunchMessage消息
+    /// </summary>
+    /// <param name="message"></param>
+    /// <returns></returns>
     public Task onProbeHolePunchMessage(ProbeHolePunchMessage message)
     {
-        Log.Information($"Received probe hole punch message: Identity={message.Identity}");
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 收到ProbeIpv6Message消息
+    /// </summary>
+    /// <param name="message"></param>
+    /// <returns></returns>
     public Task onProbeIpv6Message(ProbeIpv6Message message)
     {
-        Log.Information($"Received probe IPv6 message: Identity={message.Identity}");
         return Task.CompletedTask;
     }
 }

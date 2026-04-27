@@ -2,14 +2,15 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Rustun.Helpers;
 using Rustun.Services;
+using Rustun.ViewModels.Pages;
 using Serilog;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
-
 namespace Rustun.Views.Pages;
 
 /// <summary>
@@ -17,19 +18,18 @@ namespace Rustun.Views.Pages;
 /// </summary>
 public sealed partial class HomePage : Page, INotifyPropertyChanged
 {
+    private HomePageViewModel viewModel = new HomePageViewModel();
+
     public event PropertyChangedEventHandler? PropertyChanged;
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
-    private readonly LogService _logService;
 
     public HomePage()
     {
         InitializeComponent();
-
-        _logService = LogService.Instance;
         statusText.Text = "状态: 已停止";
     }
 
@@ -105,21 +105,13 @@ public sealed partial class HomePage : Page, INotifyPropertyChanged
 
             string serverIp = SettingsHelper.Current.ServerIp;
             string serverPort = SettingsHelper.Current.ServerPort;
-            await VpnService.Instance.ConnectAsync(serverIp, Convert.ToInt32(serverPort) + 1, identity, SettingsHelper.Current.EncryptionMode, SettingsHelper.Current.EncryptionSecret);
+            await VpnService.Instance.ConnectAsync(serverIp, Convert.ToInt32(serverPort), identity, SettingsHelper.Current.EncryptionMode, SettingsHelper.Current.EncryptionSecret);
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"启动失败");
             IsProcessRunning = false;
-
-            ContentDialog errorDialog = new ContentDialog
-            {
-                Title = "启动失败",
-                Content = $"无法连接到服务器: {ex.Message}",
-                CloseButtonText = "关闭",
-                XamlRoot = this.XamlRoot
-            };
-            await errorDialog.ShowAsync();
+            await ShowNotification($"启动失败: {ex.Message}");
         }
         finally
         {
@@ -131,29 +123,21 @@ public sealed partial class HomePage : Page, INotifyPropertyChanged
     {
         if (IsProcessRunning)
         {
-            ShowNotification("已停止", false);
+            await VpnService.Instance.DisconnectAsync();
+            await ShowNotification("已停止", false);
         }
     }
 
-    private void OnOutputReceived(object? sender, ProcessEventArgs e)
+    private async Task ShowNotification(string message, bool isError = true)
     {
-        _logService.AddLog(e.Message);
-    }
-
-    private void OnProcessExited(object? sender, ProcessEventArgs e)
-    {
-        IsProcessRunning = false;
-
-        // 显示意外停止通知
-        if (e.ExitCode != 0)
+        ContentDialog errorDialog = new ContentDialog
         {
-            ShowNotification($"意外停止 (退出代码: {e.ExitCode})");
-        }
-    }
-
-    private void ShowNotification(string message, bool isError = true)
-    {
-        _logService.AddLog(message, isError ? "ERROR" : "INFO");
+            Title = isError ? "错误" : "提示",
+            Content = $"{message}",
+            CloseButtonText = "关闭",
+            XamlRoot = this.XamlRoot
+        };
+        await errorDialog.ShowAsync();
     }
 
     private void Page_Unloaded(object? sender, RoutedEventArgs e)

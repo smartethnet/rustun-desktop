@@ -25,7 +25,7 @@ public class RustunClientHandler : SimpleChannelInboundHandler<RustunPacket>
 
     protected override void ChannelRead0(IChannelHandlerContext ctx, RustunPacket msg)
     {
-        Log.Information($"Receive message: Magic={BitConverter.ToString(BitConverter.GetBytes(msg.Magic))} Version={msg.Version} Type={msg.Type} DataLength={msg.Length}");
+        Log.Debug($"Receive packet: Magic={BitConverter.ToString(BitConverter.GetBytes(msg.Magic))} Version={msg.Version} Type={msg.Type} DataLength={msg.Length}");
         switch (msg.Type)
         {
             case RustunPacketType.Handshake:
@@ -59,6 +59,7 @@ public class RustunClientHandler : SimpleChannelInboundHandler<RustunPacket>
             _ = _client.onError(new InvalidOperationException($"{label}: empty payload."));
             return;
         }
+        Log.Debug($"{label}: {Encoding.UTF8.GetString(data)}");
 
         try
         {

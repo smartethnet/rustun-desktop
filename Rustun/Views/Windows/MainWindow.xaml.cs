@@ -82,9 +82,6 @@ namespace Rustun.Views.Windows
                     case "home":
                         RootFrame.Navigate(typeof(HomePage));
                         break;
-                    case "log":
-                        RootFrame.Navigate(typeof(LogPage));
-                        break;
                     default:
                         break;
                 }

@@ -46,7 +46,6 @@
                         <FontIcon Glyph="&#xE705;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Logs" Tag="log" Icon="ProtectedDocument"/>
             </NavigationView.MenuItems>
             <Frame x:Name="RootFrame" Navigated="OnNavigated"/>
         </NavigationView>
