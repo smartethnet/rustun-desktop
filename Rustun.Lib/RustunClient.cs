@@ -5,6 +5,7 @@ using DotNetty.Transport.Channels.Sockets;
 using NetWintun;
 using Rustun.Lib.Crypto;
 using Rustun.Lib.Message;
+using Rustun.Lib.Packet;
 using Serilog;
 using System.Management;
 using System.Net;
@@ -183,7 +184,8 @@ public class RustunClient
                     var packet = await Session.ReceivePacketAsync();
                     if (packet != null)
                     {
-                        await channel.WriteAndFlushAsync(packet);
+                        RustunPacket dataPacket = new RustunPacket(RustunPacketType.Data, packet);
+                        await channel.WriteAndFlushAsync(dataPacket);
                     }
                 }
             }

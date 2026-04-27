@@ -26,7 +26,7 @@
         <ScrollView Grid.Row="1" Padding="36,0,36,0" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
             <StackPanel MaxWidth="1064" Spacing="{StaticResource VerticalSpacing}" Padding="0,36,0,36">
                 <InfoBar
-                    IsOpen="{x:Bind isServerInfoSet.Equals(x:False)}"
+                    IsOpen="{x:Bind viewModel.IsServerInfoSet.Equals(x:False)}"
                     Severity="Error"
                     Message="Server configuration were not set. Please goto Settings page and set the nessary info." />
 
@@ -61,21 +61,21 @@
 
                                 <TextBlock Text="Server" FontSize="16" FontWeight="ExtraBold" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center"/>
                                 <StackPanel Orientation="Horizontal" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Padding="0" Spacing="8">
-                                    <ProgressRing IsActive="{x:Bind Loading, Mode=OneWay}" Width="16" Height="16" Grid.Column="2"/>
-                                    <ToggleSwitch IsOn="{x:Bind IsProcessRunning,Mode=OneWay}" MinWidth="0" Width="Auto" Toggled="connectToggleSwitch_Toggled"/>
+                                    <ProgressRing IsActive="{x:Bind viewModel.Loading, Mode=OneWay}" Width="16" Height="16" Grid.Column="2"/>
+                                    <ToggleSwitch IsOn="{x:Bind viewModel.IsConnected,Mode=OneWay}" MinWidth="0" Width="Auto" Toggled="connectToggleSwitch_Toggled"/>
                                 </StackPanel>
                             </Grid>
                             
                             <!-- Server Url -->
                             <StackPanel Orientation="Horizontal" Spacing="{StaticResource VerticalSpacing}">
                                 <FontIcon Glyph="&#xE753;" />
-                                <TextBlock Text="{x:Bind serverUrl}" />
+                                <TextBlock Text="{x:Bind viewModel.ServerUrl}" />
                             </StackPanel>
 
                             <!-- client identity -->
                             <StackPanel Orientation="Horizontal" Spacing="{StaticResource VerticalSpacing}">
                                 <FontIcon Glyph="&#xF552;" />
-                                <TextBlock Text="{x:Bind identity}" />
+                                <TextBlock Text="{x:Bind viewModel.Identity}" />
                             </StackPanel>
 
                             <!-- Status text -->
