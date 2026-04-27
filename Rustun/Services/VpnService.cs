@@ -8,7 +8,7 @@ namespace Rustun.Services
     /// <summary>
     /// VPN service
     /// </summary>
-    internal class VpnService : IDisposable
+    internal class VpnService
     {
         private static VpnService _instance = new VpnService();
         public static VpnService Instance => _instance;
@@ -54,21 +54,6 @@ namespace Rustun.Services
             if (Client != null)
             {
                 await Client.StopAsync();
-
-                Client.OnConnected -= Client_OnConnected;
-                Client.OnDisconnected -= Client_OnDisconnected;
-                Client = null;
-            }
-        }
-
-        public async void Dispose()
-        {
-            if (Client != null)
-            {
-                await Client.StopAsync();
-
-                Client.OnConnected -= Client_OnConnected;
-                Client.OnDisconnected -= Client_OnDisconnected;
                 Client = null;
             }
         }

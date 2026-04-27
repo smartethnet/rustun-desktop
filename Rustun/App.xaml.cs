@@ -93,7 +93,7 @@ namespace Rustun
 
         private void SetupLogging()
         {
-            var logFile = Path.Combine(WindowHelper.GetAppLocalFolder().Path, "logs", "rustun-.log");
+            var logFile = Path.Combine(WindowHelper.GetAppLocalFolderPath(), "logs", "rustun-.log");
             Log.Logger = new LoggerConfiguration()
                .MinimumLevel.Verbose()
                .WriteTo.File(logFile, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 31)

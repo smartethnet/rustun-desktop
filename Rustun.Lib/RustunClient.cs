@@ -29,6 +29,9 @@ public class RustunClient
     private CancellationTokenSource? handshakeStopCts;
     private static IEventLoopGroup group = new MultithreadEventLoopGroup();
 
+    private CancellationTokenSource? trafficCts;
+    private Task? trafficTask;
+
     private Adapter? Adapter;
     private Guid? AdapterId;
     private Session? Session;
@@ -113,11 +116,12 @@ public class RustunClient
 
             // 等待握手响应（StopAsync 可通过 handshakeStopCts 取消此等待）
             handshakeStopCts = new CancellationTokenSource();
-            handshakeStopCts.CancelAfter(DefaultTimeout);
+            using var handshakeTimeoutCts = new CancellationTokenSource(DefaultTimeout);
+            using var handshakeLinkedCts = CancellationTokenSource.CreateLinkedTokenSource(handshakeStopCts.Token, handshakeTimeoutCts.Token);
             HandshakeReplyMessage response;
             try
             {
-                response = await handshakeAckCompletion.Task.WaitAsync(handshakeStopCts.Token);
+                response = await handshakeAckCompletion.Task.WaitAsync(handshakeLinkedCts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -167,6 +171,7 @@ public class RustunClient
     {
         Log.Information($"Stopping RustunClient...");
         handshakeStopCts?.Cancel();
+        trafficCts?.Cancel();
         await DisposeNetworkResourcesAsync();
         Log.Information($"RustunClient stopped.");
     }
@@ -182,11 +187,17 @@ public class RustunClient
             Log.Warning($"Cannot transfer traffic: Session or channel is not initialized.");
             return;
         }
-        Task.Run(async () =>
+
+        trafficCts?.Cancel();
+        trafficCts?.Dispose();
+        trafficCts = new CancellationTokenSource();
+
+        var token = trafficCts.Token;
+        trafficTask = Task.Run(async () =>
         {
             try
             {
-                while (Session != null && channel != null && channel.Active)
+                while (!token.IsCancellationRequested && Session != null && channel != null && channel.Active)
                 {
                     var packet = await Session.ReceivePacketAsync();
                     if (packet != null)
@@ -196,9 +207,13 @@ public class RustunClient
                     }
                 }
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // expected on stop
+            }
             catch (Exception ex)
             {
-                Log.Error($"Error in traffic transfer loop: {ex.Message}");
+                Log.Error(ex, "Error in traffic transfer loop.");
             }
         });
     }
@@ -230,36 +245,41 @@ public class RustunClient
     private void setVirtualNetworkAdapterIpAddress(string uuid, string ip, string mask)
     {
         // 获取所有网络适配器配置
-        ManagementClass mc = new ManagementClass("Win32_NetworkAdapterConfiguration");
-        ManagementObjectCollection adapters = mc.GetInstances();
+        using var mc = new ManagementClass("Win32_NetworkAdapterConfiguration");
+        using var adapters = mc.GetInstances();
         foreach (ManagementObject item in adapters)
         {
-            var objectSettingId = item["SettingID"];
-            if (objectSettingId is string settingId)
+            using (item)
             {
-                string adapterId = "{" + uuid.ToUpper() + "}";
-                if (settingId == adapterId)
+                var objectSettingId = item["SettingID"];
+                if (objectSettingId is string settingId)
                 {
-                    var newIP = item.GetMethodParameters("EnableStatic");
-                    if (newIP == null)
+                    string adapterId = "{" + uuid.ToUpper() + "}";
+                    if (settingId == adapterId)
                     {
-                        throw new InvalidOperationException("EnableStatic method not found on adapter configuration.");
-                    }
+                        var newIP = item.GetMethodParameters("EnableStatic");
+                        if (newIP == null)
+                        {
+                            throw new InvalidOperationException("EnableStatic method not found on adapter configuration.");
+                        }
 
-                    newIP["IPAddress"] = new string[] { ip ?? throw new ArgumentNullException(nameof(ip)) };
-                    newIP["SubnetMask"] = new string[] { mask ?? throw new ArgumentNullException(nameof(mask)) };
+                        newIP["IPAddress"] = new string[] { ip ?? throw new ArgumentNullException(nameof(ip)) };
+                        newIP["SubnetMask"] = new string[] { mask ?? throw new ArgumentNullException(nameof(mask)) };
 
-                    var result = item.InvokeMethod("EnableStatic", newIP, null);
-                    if (result == null)
-                    {
-                        throw new InvalidOperationException("EnableStatic invocation returned null.");
-                    }
+                        var result = item.InvokeMethod("EnableStatic", newIP, null);
+                        if (result == null)
+                        {
+                            throw new InvalidOperationException("EnableStatic invocation returned null.");
+                        }
 
-                    var returnObj = result["returnvalue"];
-                    int returnValue = Convert.ToInt32(returnObj ?? 0);
-                    if (returnValue != 0 && returnValue != 1)
-                    {
-                        throw new Exception("Set IP address and subnet mask error: " + returnValue);
+                        var returnObj = result["returnvalue"];
+                        int returnValue = Convert.ToInt32(returnObj ?? 0);
+                        if (returnValue != 0 && returnValue != 1)
+                        {
+                            throw new Exception("Set IP address and subnet mask error: " + returnValue);
+                        }
+
+                        break;
                     }
                 }
             }
@@ -277,32 +297,37 @@ public class RustunClient
     private void setVirtualNetworkAdapterGateway(string uuid, string gateway)
     {
         // 获取所有网络适配器配置
-        ManagementClass mc = new ManagementClass("Win32_NetworkAdapterConfiguration");
-        ManagementObjectCollection adapters = mc.GetInstances();
+        using var mc = new ManagementClass("Win32_NetworkAdapterConfiguration");
+        using var adapters = mc.GetInstances();
         foreach (ManagementObject item in adapters)
         {
-            var objectSettingId = item["SettingID"];
-            if (objectSettingId is string settingId)
+            using (item)
             {
-                string adapterId = "{" + uuid.ToUpper() + "}";
-                if (settingId == adapterId)
+                var objectSettingId = item["SettingID"];
+                if (objectSettingId is string settingId)
                 {
-                    var newGateway = item.GetMethodParameters("SetGateways");
-                    if (newGateway == null)
+                    string adapterId = "{" + uuid.ToUpper() + "}";
+                    if (settingId == adapterId)
                     {
-                        throw new InvalidOperationException("SetGateways method not found on adapter configuration.");
-                    }
-                    newGateway["DefaultIPGateway"] = new string[] { gateway ?? throw new ArgumentNullException(nameof(gateway)) };
-                    var result = item.InvokeMethod("SetGateways", newGateway, null);
-                    if (result == null)
-                    {
-                        throw new InvalidOperationException("SetGateways invocation returned null.");
-                    }
-                    var returnObj = result["returnvalue"];
-                    int returnValue = Convert.ToInt32(returnObj ?? 0);
-                    if (returnValue != 0 && returnValue != 1)
-                    {
-                        throw new Exception("Set gateway error: " + returnValue);
+                        var newGateway = item.GetMethodParameters("SetGateways");
+                        if (newGateway == null)
+                        {
+                            throw new InvalidOperationException("SetGateways method not found on adapter configuration.");
+                        }
+                        newGateway["DefaultIPGateway"] = new string[] { gateway ?? throw new ArgumentNullException(nameof(gateway)) };
+                        var result = item.InvokeMethod("SetGateways", newGateway, null);
+                        if (result == null)
+                        {
+                            throw new InvalidOperationException("SetGateways invocation returned null.");
+                        }
+                        var returnObj = result["returnvalue"];
+                        int returnValue = Convert.ToInt32(returnObj ?? 0);
+                        if (returnValue != 0 && returnValue != 1)
+                        {
+                            throw new Exception("Set gateway error: " + returnValue);
+                        }
+
+                        break;
                     }
                 }
             }
@@ -315,6 +340,32 @@ public class RustunClient
     /// <returns></returns>
     private async Task DisposeNetworkResourcesAsync()
     {
+        // 关闭流量转发
+        trafficCts?.Cancel();
+        var tt = trafficTask;
+        trafficTask = null;
+        if (tt != null)
+        {
+            try
+            {
+                var completed = await Task.WhenAny(tt, Task.Delay(TimeSpan.FromSeconds(1)));
+                if (!ReferenceEquals(completed, tt))
+                {
+                    Log.Warning("Traffic transfer task did not stop within timeout; continuing shutdown.");
+                }
+                else
+                {
+                    await tt;
+                }
+            }
+            catch
+            {
+                // ignore background loop errors during shutdown
+            }
+        }
+        trafficCts?.Dispose();
+        trafficCts = null;
+
         // 关闭网络连接
         var ch = channel;
         channel = null;
@@ -330,6 +381,7 @@ public class RustunClient
             }
         }
 
+        // 关闭虚拟网卡会话
         if (Session != null)
         {
             try
@@ -347,7 +399,7 @@ public class RustunClient
             }
         }
 
-        // 注意：EventLoopGroup 是共享的，不在这里关闭
+        // 关闭虚拟网卡
         if (Adapter != null)
         {
             try

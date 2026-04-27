@@ -42,7 +42,6 @@ public sealed partial class HomePage : Page
     {
         try
         {
-
             await viewModel.Start();
         }
         catch (Exception ex)
@@ -56,7 +55,6 @@ public sealed partial class HomePage : Page
     {
         try
         {
-
             await viewModel.Stop();
         }
         catch (Exception ex)
@@ -80,5 +78,6 @@ public sealed partial class HomePage : Page
 
     private void Page_Unloaded(object? sender, RoutedEventArgs e)
     {
+        viewModel.Dispose();
     }
 }

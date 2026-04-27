@@ -31,8 +31,6 @@ public class RustunPacketEncoder : MessageToByteEncoder<RustunPacket>
 
         output.WriteUnsignedShort((ushort)cipher.Length);
         output.WriteBytes(cipher);
-        Log.Debug("Encoded packet: Magic={Magic}, Version={Version}, Type={Type}, Length={Length}, Data={Data}",
-            message.Magic, message.Version, message.Type, cipher.Length, BitConverter.ToString(cipher));
     }
 
     private static void WriteUInt32(IByteBuffer output, uint value)

@@ -94,17 +94,33 @@ public partial class WindowHelper
 
     static private List<Window> _activeWindows = new List<Window>();
 
-    static public StorageFolder GetAppLocalFolder()
+    private static readonly Lazy<Task<StorageFolder>> _localFolderTask = new Lazy<Task<StorageFolder>>(async () =>
     {
-        StorageFolder localFolder;
         if (!NativeMethods.IsAppPackaged)
         {
-            localFolder = Task.Run(async () => await StorageFolder.GetFolderFromPathAsync(AppContext.BaseDirectory)).Result;
+            return await StorageFolder.GetFolderFromPathAsync(AppContext.BaseDirectory);
         }
-        else
+
+        return ApplicationData.Current.LocalFolder;
+    });
+
+    static public Task<StorageFolder> GetAppLocalFolderAsync()
+    {
+        return _localFolderTask.Value;
+    }
+
+    static public StorageFolder GetAppLocalFolder()
+    {
+        return GetAppLocalFolderAsync().GetAwaiter().GetResult();
+    }
+
+    static public string GetAppLocalFolderPath()
+    {
+        if (!NativeMethods.IsAppPackaged)
         {
-            localFolder = ApplicationData.Current.LocalFolder;
+            return AppContext.BaseDirectory;
         }
-        return localFolder;
+
+        return ApplicationData.Current.LocalFolder.Path;
     }
 }
