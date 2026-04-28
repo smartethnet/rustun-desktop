@@ -16,6 +16,11 @@
         <CornerRadius x:Key="CardCornerRadius">8</CornerRadius>
         <x:Double x:Key="CardShadowOpacity">0.10</x:Double>
         <Thickness x:Key="CardShadowMargin">0,3,0,0</Thickness>
+
+        <!-- Status pill brushes (use accent only; avoids unknown theme resources) -->
+        <SolidColorBrush x:Key="PillAccentBgBrush" Color="{ThemeResource SystemAccentColor}" Opacity="0.14" />
+        <SolidColorBrush x:Key="PillAccentStrokeBrush" Color="{ThemeResource SystemAccentColor}" Opacity="0.70" />
+        <SolidColorBrush x:Key="PillAccentTextBrush" Color="{ThemeResource SystemAccentColor}" />
     </Page.Resources>
 
     <Grid x:Name="RootGrid">
@@ -94,29 +99,29 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                            <!-- Accent strip -->
-                            <Rectangle
+                                <!-- Accent strip -->
+                                <Rectangle
                                 Grid.Column="0"
                                 RadiusX="2"
                                 RadiusY="2"
                                 Fill="{ThemeResource SystemAccentColor}" />
 
-                            <StackPanel Grid.Column="1" Spacing="12">
-                                <!-- Header + connect switch -->
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="1" Spacing="12">
+                                    <!-- Header + connect switch -->
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
 
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                        <FontIcon Glyph="&#xE705;" />
-                                        <TextBlock Text="连接" Style="{StaticResource SubtitleTextBlockStyle}" />
-                                    </StackPanel>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <FontIcon Glyph="&#xE705;" />
+                                            <TextBlock Text="连接" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                        </StackPanel>
 
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="8">
-                                        <ProgressRing IsActive="{x:Bind viewModel.Loading, Mode=OneWay}" Width="16" Height="16"/>
-                                        <ToggleSwitch
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="8">
+                                            <ProgressRing IsActive="{x:Bind viewModel.Loading, Mode=OneWay}" Width="16" Height="16"/>
+                                            <ToggleSwitch
                                             OnContent="已连接"
                                             OffContent="未连接"
                                             IsEnabled="{x:Bind viewModel.CanToggleVpn, Mode=OneWay}"
@@ -124,34 +129,44 @@
                                             MinWidth="0"
                                             Width="Auto"
                                             Toggled="ConnectToggleSwitch_Toggled" />
-                                    </StackPanel>
-                                </Grid>
+                                        </StackPanel>
+                                    </Grid>
 
-                                <Grid ColumnSpacing="12" RowSpacing="8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
+                                    <!-- Higher-density info -->
+                                    <Grid ColumnSpacing="16" RowSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
 
-                                    <FontIcon Grid.Row="0" Grid.Column="0" Glyph="&#xE753;" />
-                                    <TextBlock
-                                        Grid.Row="0"
-                                        Grid.Column="1"
-                                        Text="{x:Bind viewModel.ServerUrl}"
-                                        TextTrimming="CharacterEllipsis" />
+                                        <Grid Grid.Column="0" ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Grid.Column="0" Glyph="&#xE753;" />
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Text="服务器" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                                <TextBlock Text="{x:Bind viewModel.ServerUrl}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Grid>
 
-                                    <FontIcon Grid.Row="1" Grid.Column="0" Glyph="&#xE77B;" />
-                                    <TextBlock
-                                        Grid.Row="1"
-                                        Grid.Column="1"
-                                        Text="{x:Bind viewModel.Identity}"
-                                        TextTrimming="CharacterEllipsis" />
-                                </Grid>
-                            </StackPanel>
+                                        <Grid Grid.Column="1" ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Grid.Column="0" Glyph="&#xE77B;" />
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Text="身份" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                                <TextBlock Text="{x:Bind viewModel.Identity}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Grid>
+                                </StackPanel>
                             </Grid>
                         </Border>
                     </Grid>

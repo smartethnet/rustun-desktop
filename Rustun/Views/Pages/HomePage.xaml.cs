@@ -77,6 +77,9 @@ public sealed partial class HomePage : Page
 
     private void OpenSettings_Click(object sender, RoutedEventArgs e)
     {
+        // Keep NavigationView selection in sync with programmatic navigation.
+        var nav = App.MainWindow.NavigationView;
+        nav.SelectedItem = nav.SettingsItem;
         App.MainWindow.Navigate(typeof(SettingsPage));
     }
 

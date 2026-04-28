@@ -100,25 +100,59 @@ namespace Rustun.Views.Windows
 
         private void TitleBar_BackRequested(TitleBar sender, object args)
         {
-            if (this.RootFrame.CanGoBack)
+            if (!RootFrame.CanGoBack)
             {
-                this.RootFrame.GoBack();
+                return;
             }
+
+            RootFrame.GoBack();
+            // GoBack 后 Navigated 也会触发；此处再同步一次，避免仅依赖 SourcePageType 导致选中项不更新。
+            UpdateNavigationViewSelectionForPage(GetCurrentFramePageType());
         }
 
         private void OnNavigated(object sender, NavigationEventArgs e)
         {
+            var pageType = (e.Content as Page)?.GetType() ?? e.SourcePageType;
+            UpdateNavigationViewSelectionForPage(pageType);
+        }
+
+        /// <summary>
+        /// 根据当前 Frame 中的页面类型，同步 <see cref="NavigationView"/> 的选中项（含设置项）。
+        /// </summary>
+        private void UpdateNavigationViewSelectionForPage(Type? pageType)
+        {
+            if (pageType == typeof(SettingsPage))
+            {
+                NavigationViewControl.SelectedItem = NavigationViewControl.SettingsItem;
+                return;
+            }
+
+            var key = pageType?.Name.Replace("Page", string.Empty, StringComparison.Ordinal);
+            if (string.IsNullOrEmpty(key))
+            {
+                return;
+            }
+
             foreach (var menuItem in NavigationViewControl.MenuItems)
             {
-                if (menuItem is NavigationViewItem navItem)
+                if (menuItem is NavigationViewItem navItem &&
+                    navItem.Tag is string tag &&
+                    tag.Equals(key, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (navItem.Tag.ToString() == e.SourcePageType.Name.Replace("Page", "").ToLower())
-                    {
-                        NavigationViewControl.SelectedItem = navItem;
-                        break;
-                    }
+                    NavigationViewControl.SelectedItem = navItem;
+                    return;
                 }
             }
+        }
+
+        private Type? GetCurrentFramePageType()
+        {
+            if (RootFrame.Content is Page page)
+            {
+                return page.GetType();
+            }
+
+            return RootFrame.CurrentSourcePageType;
         }
 
         private void OnNavigationViewControlLoaded(object sender, RoutedEventArgs e)
