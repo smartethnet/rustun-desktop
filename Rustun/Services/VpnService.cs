@@ -1,6 +1,7 @@
-using CommunityToolkit.WinUI.Animations;
 using Rustun.Lib;
+using Serilog;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Rustun.Services
@@ -12,6 +13,9 @@ namespace Rustun.Services
     {
         private static VpnService _instance = new VpnService();
         public static VpnService Instance => _instance;
+
+        private readonly SemaphoreSlim _operationLock = new(1, 1);
+        private readonly object _clientSync = new();
         private RustunClient? Client { get; set; }
 
         public event EventHandler? OnConnected;
@@ -25,21 +29,110 @@ namespace Rustun.Services
 
         public async Task ConnectAsync(string ip, int port, string identity, string crypto, string secret)
         {
-            Client = new RustunClient(ip, port, identity, crypto, secret);
-            Client.OnConnected += Client_OnConnected;
-            Client.OnDisconnected += Client_OnDisconnected;
+            await _operationLock.WaitAsync();
+            try
+            {
+                RustunClient? existing;
+                lock (_clientSync)
+                {
+                    existing = Client;
+                }
 
-            await Client.StartAsync();
+                if (existing != null && IsConnected)
+                {
+                    return;
+                }
+
+                if (existing != null)
+                {
+                    RustunClient? old;
+                    lock (_clientSync)
+                    {
+                        old = Client;
+                        Client = null;
+                        if (old != null)
+                        {
+                            old.OnConnected -= Client_OnConnected;
+                            old.OnDisconnected -= Client_OnDisconnected;
+                        }
+                    }
+
+                    if (old != null)
+                    {
+                        try
+                        {
+                            await old.StopAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warning(ex, "VpnService: StopAsync failed while clearing client before connect.");
+                        }
+                    }
+                }
+
+                var client = new RustunClient(ip, port, identity, crypto, secret);
+                client.OnConnected += Client_OnConnected;
+                client.OnDisconnected += Client_OnDisconnected;
+
+                lock (_clientSync)
+                {
+                    Client = client;
+                }
+
+                try
+                {
+                    await client.StartAsync();
+                }
+                catch
+                {
+                    await TryRemoveFailedClientAsync(client);
+                    throw;
+                }
+            }
+            finally
+            {
+                _operationLock.Release();
+            }
+        }
+
+        private async Task TryRemoveFailedClientAsync(RustunClient client)
+        {
+            lock (_clientSync)
+            {
+                if (!ReferenceEquals(Client, client))
+                {
+                    return;
+                }
+
+                Client = null;
+                client.OnConnected -= Client_OnConnected;
+                client.OnDisconnected -= Client_OnDisconnected;
+            }
+
+            try
+            {
+                await client.StopAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "VpnService: StopAsync failed while cleaning up after failed connect.");
+            }
         }
 
         private void Client_OnDisconnected(object? sender, EventArgs e)
         {
             IsConnected = false;
-            if (Client != null)
+
+            lock (_clientSync)
             {
-                Client.OnConnected -= Client_OnConnected;
-                Client.OnDisconnected -= Client_OnDisconnected;
+                if (sender is RustunClient disconnected && ReferenceEquals(disconnected, Client))
+                {
+                    disconnected.OnConnected -= Client_OnConnected;
+                    disconnected.OnDisconnected -= Client_OnDisconnected;
+                    Client = null;
+                }
             }
+
             OnDisconnected?.Invoke(this, e);
         }
 
@@ -51,11 +144,41 @@ namespace Rustun.Services
 
         public async Task DisconnectAsync()
         {
-            if (Client != null)
+            await _operationLock.WaitAsync();
+            try
             {
-                await Client.StopAsync();
-                Client = null;
+                RustunClient? client;
+                lock (_clientSync)
+                {
+                    client = Client;
+                    Client = null;
+                    if (client != null)
+                    {
+                        client.OnConnected -= Client_OnConnected;
+                        client.OnDisconnected -= Client_OnDisconnected;
+                    }
+                }
+
+                if (client != null)
+                {
+                    try
+                    {
+                        await client.StopAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "VpnService: StopAsync failed during disconnect.");
+                    }
+                }
+
+                IsConnected = false;
+                OnDisconnected?.Invoke(this, EventArgs.Empty);
+            }
+            finally
+            {
+                _operationLock.Release();
             }
         }
+
     }
 }

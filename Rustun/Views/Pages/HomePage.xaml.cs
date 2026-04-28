@@ -23,22 +23,22 @@ public sealed partial class HomePage : Page
         DataContext = viewModel;
     }
 
-    private void connectToggleSwitch_Toggled(object sender, RoutedEventArgs e)
+    private void ConnectToggleSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (sender is ToggleSwitch toggleSwitch)
         {
             if (toggleSwitch.IsOn)
             {
-                connect();
+                ConnectAsync();
             }
-            else if (!toggleSwitch.IsOn)
+            else
             {
-                disconnect();
+                DisconnectAsync();
             }
         }
     }
 
-    private async void connect()
+    private async void ConnectAsync()
     {
         try
         {
@@ -46,12 +46,12 @@ public sealed partial class HomePage : Page
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"启动失败");
+            Log.Error(ex, "启动失败");
             await ShowNotification($"启动失败: {ex.Message}");
         }
     }
 
-    private async void disconnect()
+    private async void DisconnectAsync()
     {
         try
         {
@@ -59,7 +59,7 @@ public sealed partial class HomePage : Page
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"停止失败");
+            Log.Error(ex, "停止失败");
             await ShowNotification($"停止失败: {ex.Message}");
         }
     }

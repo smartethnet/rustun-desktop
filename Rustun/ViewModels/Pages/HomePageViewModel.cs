@@ -42,8 +42,12 @@ namespace Rustun.ViewModels.Pages
             {
                 _loading = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(CanToggleVpn));
             }
         }
+
+        /// <summary>连接/断开进行中时禁用开关，避免重复点击与状态错乱。</summary>
+        public bool CanToggleVpn => !_loading;
 
         private bool _isConnected;
         public bool IsConnected

@@ -62,7 +62,12 @@
                                 <TextBlock Text="Server" FontSize="16" FontWeight="ExtraBold" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center"/>
                                 <StackPanel Orientation="Horizontal" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Padding="0" Spacing="8">
                                     <ProgressRing IsActive="{x:Bind viewModel.Loading, Mode=OneWay}" Width="16" Height="16" Grid.Column="2"/>
-                                    <ToggleSwitch IsOn="{x:Bind viewModel.IsConnected,Mode=OneWay}" MinWidth="0" Width="Auto" Toggled="connectToggleSwitch_Toggled"/>
+                                    <ToggleSwitch
+                                        IsEnabled="{x:Bind viewModel.CanToggleVpn, Mode=OneWay}"
+                                        IsOn="{x:Bind viewModel.IsConnected, Mode=OneWay}"
+                                        MinWidth="0"
+                                        Width="Auto"
+                                        Toggled="ConnectToggleSwitch_Toggled" />
                                 </StackPanel>
                             </Grid>
                             
