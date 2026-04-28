@@ -387,7 +387,6 @@ public class RustunClient
             try
             {
                 Session.Dispose();
-                Log.Information($"Session disposed.");
             }
             catch (Exception ex)
             {
@@ -405,7 +404,6 @@ public class RustunClient
             try
             {
                 Adapter.Dispose();
-                Log.Information($"Adapter disposed.");
             }
             catch (Exception ex)
             {

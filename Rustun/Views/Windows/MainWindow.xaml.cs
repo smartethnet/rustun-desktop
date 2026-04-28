@@ -1,9 +1,11 @@
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 using Rustun.Helpers;
+using Rustun.Services;
 using Rustun.Views.Pages;
 using System;
 using System.Threading.Tasks;
@@ -45,6 +47,9 @@ namespace Rustun.Views.Windows
                 AdjustNavigationViewMargin(force: true);
                 AppWindow.Changed += (_, _) => AdjustNavigationViewMargin();
             }
+
+            // 将 VpnService 的连接状态回调投递到 UI 线程
+            VpnService.Instance.AttachUiDispatcher(DispatcherQueue.GetForCurrentThread());
         }
 
         // Wraps a call to rootFrame.Navigate to give the Page a way to know which NavigationRootPage is navigating.

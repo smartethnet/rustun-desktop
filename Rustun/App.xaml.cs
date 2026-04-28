@@ -20,6 +20,8 @@ namespace Rustun
     public partial class App : Application
     {
         internal static MainWindow MainWindow { get; private set; } = null!;
+
+        /// <summary>与 <see cref="Services.VpnService.Instance"/> 相同，仅为便于从 <c>App</c> 访问；连接状态请只订阅 <see cref="Services.VpnService.ConnectionStateChanged"/>。</summary>
         internal static VpnService VpnService { get; private set; } = VpnService.Instance;
 
         /// <summary>

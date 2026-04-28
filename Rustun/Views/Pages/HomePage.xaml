@@ -63,6 +63,8 @@
                                 <StackPanel Orientation="Horizontal" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Padding="0" Spacing="8">
                                     <ProgressRing IsActive="{x:Bind viewModel.Loading, Mode=OneWay}" Width="16" Height="16" Grid.Column="2"/>
                                     <ToggleSwitch
+                                        OnContent="已连接"
+                                        OffContent="未连接"
                                         IsEnabled="{x:Bind viewModel.CanToggleVpn, Mode=OneWay}"
                                         IsOn="{x:Bind viewModel.IsConnected, Mode=OneWay}"
                                         MinWidth="0"
@@ -81,12 +83,6 @@
                             <StackPanel Orientation="Horizontal" Spacing="{StaticResource VerticalSpacing}">
                                 <FontIcon Glyph="&#xF552;" />
                                 <TextBlock Text="{x:Bind viewModel.Identity}" />
-                            </StackPanel>
-
-                            <!-- Status text -->
-                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource VerticalSpacing}">
-                                <FontIcon Glyph="&#xF167;" />
-                                <TextBlock x:Name="statusText" />
                             </StackPanel>
                         </StackPanel>
                     </Border>

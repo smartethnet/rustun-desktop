@@ -19,7 +19,6 @@ public sealed partial class HomePage : Page
     public HomePage()
     {
         InitializeComponent();
-        statusText.Text = "状态: 已停止";
         DataContext = viewModel;
     }
 

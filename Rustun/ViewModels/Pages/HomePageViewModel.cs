@@ -63,20 +63,14 @@ namespace Rustun.ViewModels.Pages
         public HomePageViewModel()
         {
             SettingsHelper.Current.PropertyChanged += handleSettingsPropertyChanged;
-            VpnService.Instance.OnConnected += handleVpnConnected;
-            VpnService.Instance.OnDisconnected += handleVpnDisconnected;
+            VpnService.Instance.ConnectionStateChanged += handleVpnConnectionStateChanged;
 
             IsConnected = VpnService.Instance.IsConnected;
         }
 
-        private void handleVpnDisconnected(object? sender, EventArgs e)
+        private void handleVpnConnectionStateChanged(object? sender, bool connected)
         {
-            IsConnected = false;
-        }
-
-        private void handleVpnConnected(object? sender, EventArgs e)
-        {
-            IsConnected = true;
+            IsConnected = connected;
         }
 
         private void handleSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -138,8 +132,7 @@ namespace Rustun.ViewModels.Pages
         public void Dispose()
         {
             SettingsHelper.Current.PropertyChanged -= handleSettingsPropertyChanged;
-            VpnService.Instance.OnConnected -= handleVpnConnected;
-            VpnService.Instance.OnDisconnected -= handleVpnDisconnected;
+            VpnService.Instance.ConnectionStateChanged -= handleVpnConnectionStateChanged;
         }
     }
 }
