@@ -14,6 +14,8 @@
         <x:Double x:Key="VerticalSpacing">8</x:Double>
         <x:Double x:Key="CardSpacing">12</x:Double>
         <CornerRadius x:Key="CardCornerRadius">8</CornerRadius>
+        <x:Double x:Key="CardShadowOpacity">0.10</x:Double>
+        <Thickness x:Key="CardShadowMargin">0,3,0,0</Thickness>
     </Page.Resources>
 
     <Grid x:Name="RootGrid">
@@ -70,109 +72,147 @@
                     </VisualStateManager.VisualStateGroups>
 
                     <!-- VPN Control -->
-                    <Border 
-                        Grid.Column="0"
-                        CornerRadius="{StaticResource CardCornerRadius}"
-                        Background="{ThemeResource CardBackgroundFillColorDefault}"
-                        BorderThickness="1"
-                        BorderBrush="{ThemeResource CardStrokeColorDefault}"
-                        Padding="16">
+                    <Grid Grid.Column="0">
+                        <!-- Faux shadow -->
+                        <Border
+                            CornerRadius="{StaticResource CardCornerRadius}"
+                            Background="Black"
+                            Opacity="{StaticResource CardShadowOpacity}"
+                            Margin="{StaticResource CardShadowMargin}"
+                            IsHitTestVisible="False" />
 
-                        <StackPanel Spacing="12">
-                            <!-- Header + connect switch -->
+                        <Border
+                            CornerRadius="{StaticResource CardCornerRadius}"
+                            Background="{ThemeResource CardBackgroundFillColorDefault}"
+                            BorderThickness="1"
+                            BorderBrush="{ThemeResource CardStrokeColorDefault}"
+                            Padding="16">
+
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                    <FontIcon Glyph="&#xE705;" />
-                                    <TextBlock Text="连接" Style="{StaticResource SubtitleTextBlockStyle}" />
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="8">
-                                    <ProgressRing IsActive="{x:Bind viewModel.Loading, Mode=OneWay}" Width="16" Height="16"/>
-                                    <ToggleSwitch
-                                        OnContent="已连接"
-                                        OffContent="未连接"
-                                        IsEnabled="{x:Bind viewModel.CanToggleVpn, Mode=OneWay}"
-                                        IsOn="{x:Bind viewModel.IsConnected, Mode=OneWay}"
-                                        MinWidth="0"
-                                        Width="Auto"
-                                        Toggled="ConnectToggleSwitch_Toggled" />
-                                </StackPanel>
-                            </Grid>
-
-                            <Grid ColumnSpacing="12" RowSpacing="8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="4" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
 
-                                <FontIcon Grid.Row="0" Grid.Column="0" Glyph="&#xE753;" />
-                                <TextBlock
-                                    Grid.Row="0"
-                                    Grid.Column="1"
-                                    Text="{x:Bind viewModel.ServerUrl}"
-                                    TextTrimming="CharacterEllipsis" />
+                            <!-- Accent strip -->
+                            <Rectangle
+                                Grid.Column="0"
+                                RadiusX="2"
+                                RadiusY="2"
+                                Fill="{ThemeResource SystemAccentColor}" />
 
-                                <FontIcon Grid.Row="1" Grid.Column="0" Glyph="&#xE77B;" />
-                                <TextBlock
-                                    Grid.Row="1"
-                                    Grid.Column="1"
-                                    Text="{x:Bind viewModel.Identity}"
-                                    TextTrimming="CharacterEllipsis" />
+                            <StackPanel Grid.Column="1" Spacing="12">
+                                <!-- Header + connect switch -->
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE705;" />
+                                        <TextBlock Text="连接" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="8">
+                                        <ProgressRing IsActive="{x:Bind viewModel.Loading, Mode=OneWay}" Width="16" Height="16"/>
+                                        <ToggleSwitch
+                                            OnContent="已连接"
+                                            OffContent="未连接"
+                                            IsEnabled="{x:Bind viewModel.CanToggleVpn, Mode=OneWay}"
+                                            IsOn="{x:Bind viewModel.IsConnected, Mode=OneWay}"
+                                            MinWidth="0"
+                                            Width="Auto"
+                                            Toggled="ConnectToggleSwitch_Toggled" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid ColumnSpacing="12" RowSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <FontIcon Grid.Row="0" Grid.Column="0" Glyph="&#xE753;" />
+                                    <TextBlock
+                                        Grid.Row="0"
+                                        Grid.Column="1"
+                                        Text="{x:Bind viewModel.ServerUrl}"
+                                        TextTrimming="CharacterEllipsis" />
+
+                                    <FontIcon Grid.Row="1" Grid.Column="0" Glyph="&#xE77B;" />
+                                    <TextBlock
+                                        Grid.Row="1"
+                                        Grid.Column="1"
+                                        Text="{x:Bind viewModel.Identity}"
+                                        TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                            </StackPanel>
                             </Grid>
-                        </StackPanel>
-                    </Border>
+                        </Border>
+                    </Grid>
 
-                    <Border
-                        x:Name="RightCard"
-                        Grid.Column="1"
-                        CornerRadius="{StaticResource CardCornerRadius}"
-                        Background="{ThemeResource CardBackgroundFillColorDefault}"
-                        BorderThickness="1"
-                        BorderBrush="{ThemeResource CardStrokeColorDefault}"
-                        Padding="16">
-                        <StackPanel Spacing="12">
-                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <FontIcon Glyph="&#xE946;" />
-                                <TextBlock Text="状态" Style="{StaticResource SubtitleTextBlockStyle}" />
-                            </StackPanel>
+                    <Grid x:Name="RightCard" Grid.Column="1">
+                        <Border
+                            CornerRadius="{StaticResource CardCornerRadius}"
+                            Background="Black"
+                            Opacity="{StaticResource CardShadowOpacity}"
+                            Margin="{StaticResource CardShadowMargin}"
+                            IsHitTestVisible="False" />
 
-                            <StackPanel Spacing="6">
-                                <TextBlock
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="提示" />
-                                <TextBlock
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    TextWrapping="Wrap"
-                                    Text="连接过程中会创建虚拟网卡；断开后会释放资源。若连接失败，请检查服务器地址/端口与加密模式。" />
+                        <Border
+                            CornerRadius="{StaticResource CardCornerRadius}"
+                            Background="{ThemeResource CardBackgroundFillColorDefault}"
+                            BorderThickness="1"
+                            BorderBrush="{ThemeResource CardStrokeColorDefault}"
+                            Padding="16">
+                            <StackPanel Spacing="12">
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE946;" />
+                                    <TextBlock Text="状态" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="6">
+                                    <TextBlock
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="提示" />
+                                    <TextBlock
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextWrapping="Wrap"
+                                        Text="连接过程中会创建虚拟网卡；断开后会释放资源。若连接失败，请检查服务器地址/端口与加密模式。" />
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
-                    </Border>
+                        </Border>
+                    </Grid>
                 </Grid>
 
                 <!-- Peers -->
-                <Border
-                    CornerRadius="{StaticResource CardCornerRadius}"
-                    Background="{ThemeResource CardBackgroundFillColorDefault}"
-                    BorderThickness="1"
-                    BorderBrush="{ThemeResource CardStrokeColorDefault}"
-                    Padding="16">
-                    <StackPanel Spacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE902;" />
-                            <TextBlock Text="Peers（预留）" Style="{StaticResource SubtitleTextBlockStyle}" />
+                <Grid>
+                    <Border
+                        CornerRadius="{StaticResource CardCornerRadius}"
+                        Background="Black"
+                        Opacity="{StaticResource CardShadowOpacity}"
+                        Margin="{StaticResource CardShadowMargin}"
+                        IsHitTestVisible="False" />
+                    <Border
+                        CornerRadius="{StaticResource CardCornerRadius}"
+                        Background="{ThemeResource CardBackgroundFillColorDefault}"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource CardStrokeColorDefault}"
+                        Padding="16">
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE902;" />
+                                <TextBlock Text="Peers（预留）" Style="{StaticResource SubtitleTextBlockStyle}" />
+                            </StackPanel>
+                            <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="暂未实现：后续可展示对端列表与实时流量统计。" />
                         </StackPanel>
-                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="暂未实现：后续可展示对端列表与实时流量统计。" />
-                    </StackPanel>
-                </Border>
+                    </Border>
+                </Grid>
             </StackPanel>
         </ScrollView>
     </Grid>
