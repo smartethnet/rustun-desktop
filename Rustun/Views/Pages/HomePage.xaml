@@ -11,8 +11,9 @@
     mc:Ignorable="d">
 
     <Page.Resources>
-        <!--  Spacing between rows  -->
-        <x:Double x:Key="VerticalSpacing">4</x:Double>
+        <x:Double x:Key="VerticalSpacing">8</x:Double>
+        <x:Double x:Key="CardSpacing">12</x:Double>
+        <CornerRadius x:Key="CardCornerRadius">8</CornerRadius>
     </Page.Resources>
 
     <Grid x:Name="RootGrid">
@@ -24,44 +25,74 @@
         <TextBlock x:Name="PageHeader" MaxWidth="1064" Margin="36,24,36,0" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource TitleTextBlockStyle}" Text="VPN" />
 
         <ScrollView Grid.Row="1" Padding="36,0,36,0" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
-            <StackPanel MaxWidth="1064" Spacing="{StaticResource VerticalSpacing}" Padding="0,36,0,36">
+            <StackPanel MaxWidth="1064" Spacing="{StaticResource CardSpacing}" Padding="0,24,0,36">
                 <InfoBar
                     IsOpen="{x:Bind viewModel.IsServerInfoSet.Equals(x:False)}"
-                    Severity="Error"
-                    Message="Server configuration were not set. Please goto Settings page and set the nessary info." />
+                    Severity="Warning"
+                    Title="配置未完成"
+                    Message="请先到“设置”填写服务器地址、端口和加密信息，然后再连接。">
+                    <InfoBar.ActionButton>
+                        <Button Content="去设置" Click="OpenSettings_Click" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
 
                 <!-- Server info and statics -->
-                <Grid ColumnSpacing="16">
+                <Grid x:Name="CardsGrid" ColumnSpacing="{StaticResource CardSpacing}" RowSpacing="{StaticResource CardSpacing}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <VisualStateManager.VisualStateGroups>
+                        <VisualStateGroup>
+                            <VisualState x:Name="WideState">
+                                <VisualState.StateTriggers>
+                                    <AdaptiveTrigger MinWindowWidth="900" />
+                                </VisualState.StateTriggers>
+                                <VisualState.Setters>
+                                    <Setter Target="RightCard.(Grid.Column)" Value="1" />
+                                    <Setter Target="RightCard.(Grid.Row)" Value="0" />
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState x:Name="NarrowState">
+                                <VisualState.StateTriggers>
+                                    <AdaptiveTrigger MinWindowWidth="0" />
+                                </VisualState.StateTriggers>
+                                <VisualState.Setters>
+                                    <Setter Target="RightCard.(Grid.Column)" Value="0" />
+                                    <Setter Target="RightCard.(Grid.Row)" Value="1" />
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateManager.VisualStateGroups>
 
                     <!-- VPN Control -->
                     <Border 
                         Grid.Column="0"
-                        CornerRadius="4"
+                        CornerRadius="{StaticResource CardCornerRadius}"
                         Background="{ThemeResource CardBackgroundFillColorDefault}"
                         BorderThickness="1"
                         BorderBrush="{ThemeResource CardStrokeColorDefault}"
-                        Margin="0 8 0 8"
-                        Padding="16, 8, 16, 16">
+                        Padding="16">
 
-                        <StackPanel Spacing="8">
-                            <!-- Server info and connect button -->
-                            <Grid>
+                        <StackPanel Spacing="12">
+                            <!-- Header + connect switch -->
+                            <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
 
-                                <TextBlock Text="Server" FontSize="16" FontWeight="ExtraBold" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-                                <StackPanel Orientation="Horizontal" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Padding="0" Spacing="8">
-                                    <ProgressRing IsActive="{x:Bind viewModel.Loading, Mode=OneWay}" Width="16" Height="16" Grid.Column="2"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE705;" />
+                                    <TextBlock Text="连接" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="8">
+                                    <ProgressRing IsActive="{x:Bind viewModel.Loading, Mode=OneWay}" Width="16" Height="16"/>
                                     <ToggleSwitch
                                         OnContent="已连接"
                                         OffContent="未连接"
@@ -72,37 +103,76 @@
                                         Toggled="ConnectToggleSwitch_Toggled" />
                                 </StackPanel>
                             </Grid>
-                            
-                            <!-- Server Url -->
-                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource VerticalSpacing}">
-                                <FontIcon Glyph="&#xE753;" />
-                                <TextBlock Text="{x:Bind viewModel.ServerUrl}" />
-                            </StackPanel>
 
-                            <!-- client identity -->
-                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource VerticalSpacing}">
-                                <FontIcon Glyph="&#xF552;" />
-                                <TextBlock Text="{x:Bind viewModel.Identity}" />
-                            </StackPanel>
+                            <Grid ColumnSpacing="12" RowSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <FontIcon Grid.Row="0" Grid.Column="0" Glyph="&#xE753;" />
+                                <TextBlock
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Text="{x:Bind viewModel.ServerUrl}"
+                                    TextTrimming="CharacterEllipsis" />
+
+                                <FontIcon Grid.Row="1" Grid.Column="0" Glyph="&#xE77B;" />
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Text="{x:Bind viewModel.Identity}"
+                                    TextTrimming="CharacterEllipsis" />
+                            </Grid>
                         </StackPanel>
                     </Border>
 
                     <Border
-                        Visibility="Collapsed"
+                        x:Name="RightCard"
                         Grid.Column="1"
-                        CornerRadius="4"
+                        CornerRadius="{StaticResource CardCornerRadius}"
                         Background="{ThemeResource CardBackgroundFillColorDefault}"
                         BorderThickness="1"
                         BorderBrush="{ThemeResource CardStrokeColorDefault}"
-                        Margin="0 8 0 8"
                         Padding="16">
+                        <StackPanel Spacing="12">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE946;" />
+                                <TextBlock Text="状态" Style="{StaticResource SubtitleTextBlockStyle}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6">
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="提示" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap"
+                                    Text="连接过程中会创建虚拟网卡；断开后会释放资源。若连接失败，请检查服务器地址/端口与加密模式。" />
+                            </StackPanel>
+                        </StackPanel>
                     </Border>
                 </Grid>
 
                 <!-- Peers -->
-                <Grid>
-
-                </Grid>
+                <Border
+                    CornerRadius="{StaticResource CardCornerRadius}"
+                    Background="{ThemeResource CardBackgroundFillColorDefault}"
+                    BorderThickness="1"
+                    BorderBrush="{ThemeResource CardStrokeColorDefault}"
+                    Padding="16">
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE902;" />
+                            <TextBlock Text="Peers（预留）" Style="{StaticResource SubtitleTextBlockStyle}" />
+                        </StackPanel>
+                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="暂未实现：后续可展示对端列表与实时流量统计。" />
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </ScrollView>
     </Grid>

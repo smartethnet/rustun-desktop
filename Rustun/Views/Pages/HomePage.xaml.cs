@@ -75,6 +75,11 @@ public sealed partial class HomePage : Page
         await errorDialog.ShowAsync();
     }
 
+    private void OpenSettings_Click(object sender, RoutedEventArgs e)
+    {
+        App.MainWindow.Navigate(typeof(SettingsPage));
+    }
+
     private void Page_Unloaded(object? sender, RoutedEventArgs e)
     {
         viewModel.Dispose();
