@@ -27,6 +27,26 @@ namespace Rustun.Services
         /// <summary>与底层 <see cref="RustunClient"/> 的隧道就绪状态一致；在 UI 线程上触发变更通知。</summary>
         public bool IsConnected => _isConnected;
 
+        /// <summary>读取当前客户端隧道累计字节；未连接时为 0。可在任意线程调用。</summary>
+        public void GetTrafficCounters(out long bytesUploaded, out long bytesDownloaded)
+        {
+            RustunClient? client;
+            lock (_clientSync)
+            {
+                client = Client;
+            }
+
+            if (client is null)
+            {
+                bytesUploaded = 0;
+                bytesDownloaded = 0;
+                return;
+            }
+
+            bytesUploaded = client.BytesUploaded;
+            bytesDownloaded = client.BytesDownloaded;
+        }
+
         /// <summary>
         /// 连接状态变化（true=已连接并可转发流量）。订阅此事件即可，无需再区分 OnConnected/OnDisconnected。
         /// </summary>

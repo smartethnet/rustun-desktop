@@ -171,6 +171,7 @@
                         </Border>
                     </Grid>
 
+                    <!-- 状态 -->
                     <Grid x:Name="RightCard" Grid.Column="1">
                         <Border
                             CornerRadius="{StaticResource CardCornerRadius}"
@@ -203,6 +204,72 @@
                             </StackPanel>
                         </Border>
                     </Grid>
+                </Grid>
+
+                <!-- 流量统计：累计与速率均为隧道 payload；速率由 UI 定时采样估算 -->
+                <Grid>
+                    <Border
+                        CornerRadius="{StaticResource CardCornerRadius}"
+                        Background="Black"
+                        Opacity="{StaticResource CardShadowOpacity}"
+                        Margin="{StaticResource CardShadowMargin}"
+                        IsHitTestVisible="False" />
+                    <Border
+                        CornerRadius="{StaticResource CardCornerRadius}"
+                        Background="{ThemeResource CardBackgroundFillColorDefault}"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource CardStrokeColorDefault}"
+                        Padding="16">
+                        <StackPanel Grid.Column="1" Spacing="14">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE704;" />
+                                <TextBlock Text="流量统计" Style="{StaticResource SubtitleTextBlockStyle}" />
+                            </StackPanel>
+
+                            <Grid ColumnSpacing="20" RowSpacing="14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE896;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Text="已上传" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                    </StackPanel>
+                                    <TextBlock Text="{x:Bind viewModel.TrafficUploadedDisplay}" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE74B;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Text="已下载" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                    </StackPanel>
+                                    <TextBlock Text="{x:Bind viewModel.TrafficDownloadedDisplay}" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE74A;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Text="上传速度" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                    </StackPanel>
+                                    <TextBlock Text="{x:Bind viewModel.TrafficUploadSpeedDisplay}" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE74B;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Text="下载速度" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                    </StackPanel>
+                                    <TextBlock Text="{x:Bind viewModel.TrafficDownloadSpeedDisplay}" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </Grid>
 
                 <!-- Peers -->

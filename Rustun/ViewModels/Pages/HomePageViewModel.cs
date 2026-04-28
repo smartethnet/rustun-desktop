@@ -1,3 +1,4 @@
+using Microsoft.UI.Dispatching;
 using Rustun.Helpers;
 using Rustun.Services;
 using Serilog;
@@ -23,6 +24,83 @@ namespace Rustun.ViewModels.Pages
         }
 
         public string Identity => SettingsHelper.Current.Identity;
+
+        private string _trafficUploadedDisplay = ByteFormatHelper.FormatBinary(0);
+        private string _trafficDownloadedDisplay = ByteFormatHelper.FormatBinary(0);
+
+        /// <summary>隧道 payload 累计上传（由 <see cref="Rustun.Lib.RustunClient"/> 统计）。</summary>
+        public string TrafficUploadedDisplay
+        {
+            get => _trafficUploadedDisplay;
+            private set
+            {
+                if (_trafficUploadedDisplay == value)
+                {
+                    return;
+                }
+
+                _trafficUploadedDisplay = value;
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>隧道 payload 累计下载。</summary>
+        public string TrafficDownloadedDisplay
+        {
+            get => _trafficDownloadedDisplay;
+            private set
+            {
+                if (_trafficDownloadedDisplay == value)
+                {
+                    return;
+                }
+
+                _trafficDownloadedDisplay = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string _trafficUploadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(0);
+        private string _trafficDownloadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(0);
+
+        /// <summary>由相邻两次流量采样估算的上传速率（字节/秒）。</summary>
+        public string TrafficUploadSpeedDisplay
+        {
+            get => _trafficUploadSpeedDisplay;
+            private set
+            {
+                if (_trafficUploadSpeedDisplay == value)
+                {
+                    return;
+                }
+
+                _trafficUploadSpeedDisplay = value;
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>由相邻两次流量采样估算的下载速率（字节/秒）。</summary>
+        public string TrafficDownloadSpeedDisplay
+        {
+            get => _trafficDownloadSpeedDisplay;
+            private set
+            {
+                if (_trafficDownloadSpeedDisplay == value)
+                {
+                    return;
+                }
+
+                _trafficDownloadSpeedDisplay = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private DispatcherQueueTimer? _trafficRefreshTimer;
+
+        private long _speedLastBytesUp;
+        private long _speedLastBytesDown;
+        private DateTimeOffset _speedLastSampleTime;
+        private bool _speedSamplingReady;
 
         public bool IsServerInfoSet
         {
@@ -66,11 +144,103 @@ namespace Rustun.ViewModels.Pages
             VpnService.Instance.ConnectionStateChanged += handleVpnConnectionStateChanged;
 
             IsConnected = VpnService.Instance.IsConnected;
+            if (IsConnected)
+            {
+                resetSpeedSampling();
+                startTrafficRefreshTimer();
+                refreshTrafficDisplaysFromVpn();
+            }
         }
 
         private void handleVpnConnectionStateChanged(object? sender, bool connected)
         {
             IsConnected = connected;
+            if (connected)
+            {
+                resetSpeedSampling();
+                startTrafficRefreshTimer();
+                refreshTrafficDisplaysFromVpn();
+            }
+            else
+            {
+                stopTrafficRefreshTimer();
+                resetSpeedSampling();
+                TrafficUploadedDisplay = ByteFormatHelper.FormatBinary(0);
+                TrafficDownloadedDisplay = ByteFormatHelper.FormatBinary(0);
+                TrafficUploadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(0);
+                TrafficDownloadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(0);
+            }
+        }
+
+        private void startTrafficRefreshTimer()
+        {
+            var dq = DispatcherQueue.GetForCurrentThread();
+            if (dq is null)
+            {
+                return;
+            }
+
+            _trafficRefreshTimer ??= dq.CreateTimer();
+            _trafficRefreshTimer.Interval = TimeSpan.FromSeconds(1);
+            _trafficRefreshTimer.IsRepeating = true;
+            _trafficRefreshTimer.Tick -= trafficRefreshTimer_Tick;
+            _trafficRefreshTimer.Tick += trafficRefreshTimer_Tick;
+            _trafficRefreshTimer.Start();
+        }
+
+        private void stopTrafficRefreshTimer()
+        {
+            if (_trafficRefreshTimer is null)
+            {
+                return;
+            }
+
+            _trafficRefreshTimer.Stop();
+            _trafficRefreshTimer.Tick -= trafficRefreshTimer_Tick;
+        }
+
+        private void trafficRefreshTimer_Tick(DispatcherQueueTimer sender, object args)
+        {
+            refreshTrafficDisplaysFromVpn();
+        }
+
+        private void resetSpeedSampling()
+        {
+            _speedSamplingReady = false;
+        }
+
+        private void refreshTrafficDisplaysFromVpn()
+        {
+            VpnService.Instance.GetTrafficCounters(out var up, out var down);
+            TrafficUploadedDisplay = ByteFormatHelper.FormatBinary(up);
+            TrafficDownloadedDisplay = ByteFormatHelper.FormatBinary(down);
+
+            var now = DateTimeOffset.UtcNow;
+            if (!_speedSamplingReady)
+            {
+                _speedLastBytesUp = up;
+                _speedLastBytesDown = down;
+                _speedLastSampleTime = now;
+                _speedSamplingReady = true;
+                TrafficUploadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(0);
+                TrafficDownloadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(0);
+                return;
+            }
+
+            var elapsedSeconds = (now - _speedLastSampleTime).TotalSeconds;
+            if (elapsedSeconds <= 0)
+            {
+                return;
+            }
+
+            var deltaUp = Math.Max(0L, up - _speedLastBytesUp);
+            var deltaDown = Math.Max(0L, down - _speedLastBytesDown);
+            TrafficUploadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(deltaUp / elapsedSeconds);
+            TrafficDownloadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(deltaDown / elapsedSeconds);
+
+            _speedLastBytesUp = up;
+            _speedLastBytesDown = down;
+            _speedLastSampleTime = now;
         }
 
         private void handleSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -131,6 +301,7 @@ namespace Rustun.ViewModels.Pages
 
         public void Dispose()
         {
+            stopTrafficRefreshTimer();
             SettingsHelper.Current.PropertyChanged -= handleSettingsPropertyChanged;
             VpnService.Instance.ConnectionStateChanged -= handleVpnConnectionStateChanged;
         }

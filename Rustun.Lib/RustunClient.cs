@@ -9,6 +9,7 @@ using Rustun.Lib.Packet;
 using Serilog;
 using System.Management;
 using System.Net;
+using System.Threading;
 
 namespace Rustun.Lib;
 
@@ -30,6 +31,15 @@ public class RustunClient
     private Adapter? Adapter;
     private Guid? AdapterId;
     private Session? Session;
+
+    private long _bytesUploaded;
+    private long _bytesDownloaded;
+
+    /// <summary>隧道建立后由虚拟网卡发往服务器的数据字节数（不含握手/心跳等控制报文）。</summary>
+    public long BytesUploaded => Interlocked.Read(ref _bytesUploaded);
+
+    /// <summary>隧道建立后从服务器收到的数据负载字节数（不含控制报文）。</summary>
+    public long BytesDownloaded => Interlocked.Read(ref _bytesDownloaded);
 
     public event EventHandler? OnConnected;
     public event EventHandler? OnDisconnected;
@@ -134,11 +144,10 @@ public class RustunClient
             setVirtualNetworkAdapterIpAddress(interfaceId, response.PrivateIp, response.Mask);
             setVirtualNetworkAdapterGateway(interfaceId, response.Gateway);
 
-            // 开始转发网卡流量到服务器
-            transferTraffic();
-
-            // 触发连接成功事件
+            // 新会话流量统计从 0 开始；先通知就绪再启动转发，保证统计与「已连接」语义一致
+            ResetTrafficStatistics();
             OnConnected?.Invoke(this, EventArgs.Empty);
+            transferTraffic();
         }
         catch
         {
@@ -195,6 +204,7 @@ public class RustunClient
                     var packet = await Session.ReceivePacketAsync();
                     if (packet != null)
                     {
+                        Interlocked.Add(ref _bytesUploaded, packet.Length);
                         RustunPacket dataPacket = new RustunPacket(RustunPacketType.Data, packet);
                         await channel.WriteAndFlushAsync(dataPacket);
                     }
@@ -434,6 +444,8 @@ public class RustunClient
         Log.Information($"Disconnect from server");
         await DisposeNetworkResourcesAsync();
 
+        ResetTrafficStatistics();
+
         // 触发断开连接事件
         OnDisconnected?.Invoke(this, EventArgs.Empty);
     }
@@ -460,11 +472,18 @@ public class RustunClient
     /// <returns></returns>
     public Task onDataMessage(byte[] data)
     {
+        Interlocked.Add(ref _bytesDownloaded, data.Length);
         if (Session != null)
         {
             Session.SendPacket(data);
         }
         return Task.CompletedTask;
+    }
+
+    private void ResetTrafficStatistics()
+    {
+        Interlocked.Exchange(ref _bytesUploaded, 0);
+        Interlocked.Exchange(ref _bytesDownloaded, 0);
     }
 
     /// <summary>
