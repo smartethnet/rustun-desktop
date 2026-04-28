@@ -1,0 +1,79 @@
+<UserControl
+    x:Class="Rustun.Controls.TrafficLineChart"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{ThemeResource CardBackgroundFillColorDefault}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 顶部信息栏：增加左右内边距，避免贴边 -->
+        <Grid Grid.Row="0" Margin="0,4,0,10" Padding="10,0" ColumnSpacing="10" VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock
+                x:Name="ScaleText"
+                Grid.Column="0"
+                VerticalAlignment="Center"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="0 B/s – 0 B/s"
+                TextTrimming="CharacterEllipsis" />
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Rectangle Width="10" Height="2" Fill="{ThemeResource SystemAccentColor}" />
+                    <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="上传" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Rectangle Width="10" Height="2" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.85" />
+                    <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="下载" />
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Border
+                CornerRadius="6"
+                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                Opacity="0.35" />
+
+            <Canvas x:Name="PlotCanvas">
+                <!-- 网格线（代码动态绘制） -->
+                <Canvas x:Name="GridCanvas" />
+                <!-- X 轴刻度/时间标签（代码动态绘制） -->
+                <Canvas x:Name="AxisCanvas" />
+
+                <!-- 面积填充（轻量，美观） -->
+                <Polygon
+                    x:Name="UploadFill"
+                    Fill="{ThemeResource SystemAccentColor}"
+                    Opacity="0.10" />
+                <Polygon
+                    x:Name="DownloadFill"
+                    Fill="{ThemeResource TextFillColorSecondaryBrush}"
+                    Opacity="0.06" />
+
+                <Polyline
+                    x:Name="UploadPolyline"
+                    Stroke="{ThemeResource SystemAccentColor}"
+                    StrokeThickness="2"
+                    StrokeLineJoin="Round" />
+                <Polyline
+                    x:Name="DownloadPolyline"
+                    Stroke="{ThemeResource TextFillColorSecondaryBrush}"
+                    Opacity="0.9"
+                    StrokeThickness="2"
+                    StrokeLineJoin="Round" />
+            </Canvas>
+        </Grid>
+    </Grid>
+</UserControl>
+

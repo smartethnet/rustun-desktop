@@ -3,6 +3,7 @@ using Rustun.Helpers;
 using Rustun.Services;
 using Serilog;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Rustun.ViewModels.Pages
@@ -102,6 +103,20 @@ namespace Rustun.ViewModels.Pages
         private DateTimeOffset _speedLastSampleTime;
         private bool _speedSamplingReady;
 
+        private const int SpeedHistorySeconds = 30 * 60;
+        private readonly double[] _uploadSpeedRing = new double[SpeedHistorySeconds];
+        private readonly double[] _downloadSpeedRing = new double[SpeedHistorySeconds];
+        private int _speedRingHead;
+        private int _speedRingCount;
+        private double[] _uploadSpeedSnapshot = [];
+        private double[] _downloadSpeedSnapshot = [];
+
+        /// <summary>最近 30 分钟上传速率（B/s）样本，按时间先后排列。</summary>
+        public IReadOnlyList<double> UploadSpeedSeries => _uploadSpeedSnapshot;
+
+        /// <summary>最近 30 分钟下载速率（B/s）样本，按时间先后排列。</summary>
+        public IReadOnlyList<double> DownloadSpeedSeries => _downloadSpeedSnapshot;
+
         public bool IsServerInfoSet
         {
             get
@@ -144,12 +159,11 @@ namespace Rustun.ViewModels.Pages
             VpnService.Instance.ConnectionStateChanged += handleVpnConnectionStateChanged;
 
             IsConnected = VpnService.Instance.IsConnected;
-            if (IsConnected)
-            {
-                resetSpeedSampling();
-                startTrafficRefreshTimer();
-                refreshTrafficDisplaysFromVpn();
-            }
+            // 应用启动（页面创建）即开始采样并记录 30 分钟历史曲线；
+            // 未连接时速率记录为 0，连接/断开仅重置采样基线避免跳变。
+            resetSpeedBaseline();
+            startTrafficRefreshTimer();
+            refreshTrafficDisplaysFromVpn();
         }
 
         private void handleVpnConnectionStateChanged(object? sender, bool connected)
@@ -157,14 +171,12 @@ namespace Rustun.ViewModels.Pages
             IsConnected = connected;
             if (connected)
             {
-                resetSpeedSampling();
-                startTrafficRefreshTimer();
+                resetSpeedBaseline();
                 refreshTrafficDisplaysFromVpn();
             }
             else
             {
-                stopTrafficRefreshTimer();
-                resetSpeedSampling();
+                resetSpeedBaseline();
                 TrafficUploadedDisplay = ByteFormatHelper.FormatBinary(0);
                 TrafficDownloadedDisplay = ByteFormatHelper.FormatBinary(0);
                 TrafficUploadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(0);
@@ -204,7 +216,11 @@ namespace Rustun.ViewModels.Pages
             refreshTrafficDisplaysFromVpn();
         }
 
-        private void resetSpeedSampling()
+        /// <summary>
+        /// 仅重置速率采样的“上一采样点”基线，不清空 30 分钟历史序列。
+        /// 用于断线/重连场景，避免 delta 使用到上一次连接的累计字节导致跳变。
+        /// </summary>
+        private void resetSpeedBaseline()
         {
             _speedSamplingReady = false;
         }
@@ -224,6 +240,7 @@ namespace Rustun.ViewModels.Pages
                 _speedSamplingReady = true;
                 TrafficUploadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(0);
                 TrafficDownloadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(0);
+                appendSpeedSample(0, 0);
                 return;
             }
 
@@ -235,12 +252,48 @@ namespace Rustun.ViewModels.Pages
 
             var deltaUp = Math.Max(0L, up - _speedLastBytesUp);
             var deltaDown = Math.Max(0L, down - _speedLastBytesDown);
-            TrafficUploadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(deltaUp / elapsedSeconds);
-            TrafficDownloadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(deltaDown / elapsedSeconds);
+            var upBps = deltaUp / elapsedSeconds;
+            var downBps = deltaDown / elapsedSeconds;
+            TrafficUploadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(upBps);
+            TrafficDownloadSpeedDisplay = ByteFormatHelper.FormatBytesPerSecond(downBps);
+            appendSpeedSample(upBps, downBps);
 
             _speedLastBytesUp = up;
             _speedLastBytesDown = down;
             _speedLastSampleTime = now;
+        }
+
+        private void appendSpeedSample(double uploadBps, double downloadBps)
+        {
+            // 固定容量环形缓冲：保存最近 30 分钟（按 1s 定时器采样）
+            _uploadSpeedRing[_speedRingHead] = Math.Max(0, uploadBps);
+            _downloadSpeedRing[_speedRingHead] = Math.Max(0, downloadBps);
+
+            _speedRingHead = (_speedRingHead + 1) % SpeedHistorySeconds;
+            _speedRingCount = Math.Min(SpeedHistorySeconds, _speedRingCount + 1);
+
+            _uploadSpeedSnapshot = snapshotRing(_uploadSpeedRing, _speedRingHead, _speedRingCount);
+            _downloadSpeedSnapshot = snapshotRing(_downloadSpeedRing, _speedRingHead, _speedRingCount);
+            OnPropertyChanged(nameof(UploadSpeedSeries));
+            OnPropertyChanged(nameof(DownloadSpeedSeries));
+        }
+
+        private static double[] snapshotRing(double[] ring, int head, int count)
+        {
+            if (count <= 0)
+            {
+                return [];
+            }
+
+            var result = new double[count];
+            var start = (head - count + SpeedHistorySeconds) % SpeedHistorySeconds;
+            var firstPart = Math.Min(count, SpeedHistorySeconds - start);
+            Array.Copy(ring, start, result, 0, firstPart);
+            if (firstPart < count)
+            {
+                Array.Copy(ring, 0, result, firstPart, count - firstPart);
+            }
+            return result;
         }
 
         private void handleSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
