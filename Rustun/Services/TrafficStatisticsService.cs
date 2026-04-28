@@ -11,6 +11,8 @@ namespace Rustun.Services;
 internal sealed class TrafficStatisticsService
 {
     private static readonly TrafficStatisticsService _instance = new();
+
+    /// <summary>全局单例实例。</summary>
     public static TrafficStatisticsService Instance => _instance;
 
     private DispatcherQueue? _uiDispatcher;
@@ -32,17 +34,24 @@ internal sealed class TrafficStatisticsService
         _traffic.Updated += (_, _) => TrafficUpdated?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// 绑定 UI 线程调度器并启动采样计时器（只需调用一次；重复调用会被忽略）。
+    /// </summary>
     public void AttachUiDispatcher(DispatcherQueue dispatcher)
     {
         _uiDispatcher = dispatcher;
         EnsureStarted();
     }
 
+    /// <summary>
+    /// 重置速率计算基线：用于断线/重连时避免速率突跳，不清空历史曲线。
+    /// </summary>
     public void ResetSpeedBaseline()
     {
         _traffic.ResetSpeedBaseline();
     }
 
+    /// <summary>确保采样计时器已启动（运行在 UI 线程）。</summary>
     private void EnsureStarted()
     {
         if (_uiDispatcher is null)
@@ -65,6 +74,9 @@ internal sealed class TrafficStatisticsService
         SampleOnUi();
     }
 
+    /// <summary>
+    /// 在 UI 线程采样一次 <see cref="VpnService"/> 计数器，并推进统计状态。
+    /// </summary>
     private void SampleOnUi()
     {
         // 该方法运行在 UI 线程（由 DispatcherQueueTimer 驱动）

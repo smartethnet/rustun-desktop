@@ -90,17 +90,20 @@ namespace Rustun.ViewModels.Pages
             RaiseTrafficPropertiesChanged();
         }
 
+        /// <summary>VPN 连接状态变更回调：更新 <see cref="IsConnected"/> 并刷新显示属性。</summary>
         private void handleVpnConnectionStateChanged(object? sender, bool connected)
         {
             IsConnected = connected;
             RaiseTrafficPropertiesChanged();
         }
 
+        /// <summary>流量统计刷新回调（每秒一次）：刷新流量/速率/曲线绑定。</summary>
         private void handleTrafficUpdated(object? sender, EventArgs e)
         {
             RaiseTrafficPropertiesChanged();
         }
 
+        /// <summary>触发与流量统计相关的属性变更通知，驱动 UI 刷新。</summary>
         private void RaiseTrafficPropertiesChanged()
         {
             OnPropertyChanged(nameof(TrafficUploadedDisplay));
@@ -111,6 +114,7 @@ namespace Rustun.ViewModels.Pages
             OnPropertyChanged(nameof(DownloadSpeedSeries));
         }
 
+        /// <summary>设置项变更回调：刷新服务器地址/身份等显示。</summary>
         private void handleSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(SettingsHelper.ServerIp) || e.PropertyName == nameof(SettingsHelper.ServerPort) || e.PropertyName == nameof(SettingsHelper.Identity))
@@ -121,6 +125,7 @@ namespace Rustun.ViewModels.Pages
             }
         }
 
+        /// <summary>发起连接。</summary>
         public async Task Start()
         {
             if (_isConnected || _loading)
@@ -148,6 +153,7 @@ namespace Rustun.ViewModels.Pages
             }
         }
 
+        /// <summary>发起断开。</summary>
         public async Task Stop()
         {
             if (!_isConnected)
@@ -167,6 +173,7 @@ namespace Rustun.ViewModels.Pages
             }
         }
 
+        /// <summary>释放订阅，避免页面切换后重复回调。</summary>
         public void Dispose()
         {
             SettingsHelper.Current.PropertyChanged -= handleSettingsPropertyChanged;

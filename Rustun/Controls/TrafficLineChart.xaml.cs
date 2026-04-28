@@ -62,6 +62,7 @@ public sealed partial class TrafficLineChart : UserControl
         SizeChanged += (_, _) => Redraw();
     }
 
+    /// <summary>系列数据变更回调：触发重新绘制。</summary>
     private static void OnSeriesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is TrafficLineChart chart)
@@ -70,6 +71,7 @@ public sealed partial class TrafficLineChart : UserControl
         }
     }
 
+    /// <summary>根据当前数据与控件尺寸重新绘制折线、填充、网格与 X 轴标签。</summary>
     private void Redraw()
     {
         var upload = UploadSeries;
@@ -126,6 +128,7 @@ public sealed partial class TrafficLineChart : UserControl
         DownloadFill.Points = BuildFillPolygon(downloadPoints, width, height);
     }
 
+    /// <summary>绘制背景网格（水平/竖向虚线辅助线）。</summary>
     private void DrawGrid(double width, double height)
     {
         GridCanvas.Children.Clear();
@@ -174,6 +177,9 @@ public sealed partial class TrafficLineChart : UserControl
         }
     }
 
+    /// <summary>
+    /// 绘制 X 轴刻度与时间标签：按“每分钟一个标签”策略，仅绘制整分钟点，避免拥挤。
+    /// </summary>
     private void DrawXAxis(double width, double height, int count, IReadOnlyList<DateTimeOffset>? times)
     {
         AxisCanvas.Children.Clear();
@@ -238,6 +244,7 @@ public sealed partial class TrafficLineChart : UserControl
         }
     }
 
+    /// <summary>将序列值映射为折线点集合（含偏移与缩放）。</summary>
     private static PointCollection BuildPoints(
         IReadOnlyList<double>? series,
         int count,
@@ -267,6 +274,7 @@ public sealed partial class TrafficLineChart : UserControl
         return points;
     }
 
+    /// <summary>根据折线点构建面积填充多边形（封闭到底部）。</summary>
     private static PointCollection BuildFillPolygon(PointCollection linePoints, double width, double height)
     {
         var poly = new PointCollection();

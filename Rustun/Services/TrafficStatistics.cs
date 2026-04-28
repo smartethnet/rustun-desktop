@@ -37,13 +37,18 @@ internal sealed class TrafficStatistics
     /// <summary>当采样完成并更新了内部状态时触发。</summary>
     public event EventHandler? Updated;
 
+    /// <summary>
+    /// 重置速率计算基线：下次 <see cref="Sample"/> 会把当前累计字节作为基线并将速率置 0，
+    /// 以避免断线/重连导致的速率突跳（不会清空历史曲线）。
+    /// </summary>
     public void ResetSpeedBaseline()
     {
         _baselineReady = false;
     }
 
     /// <summary>
-    /// 采样一次。调用方提供当前累计字节（未连接时应为 0），以及当前 UTC 时间。
+    /// 采样一次：根据“当前累计字节”和“上一采样点”估算速率，并追加到 30 分钟历史曲线。
+    /// 调用方应传入当前 UTC 时间；未连接时累计字节应为 0。
     /// </summary>
     public void Sample(long bytesUploaded, long bytesDownloaded, DateTimeOffset nowUtc)
     {
@@ -83,6 +88,9 @@ internal sealed class TrafficStatistics
         Updated?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// 追加一条速率样本到历史环形缓冲，并更新快照数组（按时间先后排列）。
+    /// </summary>
     private void AppendHistory(double uploadBps, double downloadBps)
     {
         _uploadRing[_ringHead] = Math.Max(0, uploadBps);
@@ -95,6 +103,9 @@ internal sealed class TrafficStatistics
         _downloadSnapshot = SnapshotRing(_downloadRing, _ringHead, _ringCount);
     }
 
+    /// <summary>
+    /// 将环形缓冲复制为连续数组（旧 → 新），用于绑定/UI 展示。
+    /// </summary>
     private static double[] SnapshotRing(double[] ring, int head, int count)
     {
         if (count <= 0)
