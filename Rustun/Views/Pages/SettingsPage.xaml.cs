@@ -130,6 +130,16 @@ public sealed partial class SettingsPage : Page, INotifyPropertyChanged
                 encryptMode.SelectedIndex = -1;
                 break;
         }
+
+        serverSecretTextBox.Password = encryptionSecret;
+    }
+
+    private void ServerSecretPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox box)
+        {
+            encryptionSecret = box.Password;
+        }
     }
 
     private void themeMode_SelectionChanged(object sender, RoutedEventArgs e)

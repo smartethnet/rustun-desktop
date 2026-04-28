@@ -78,15 +78,19 @@
                                 <ComboBox x:Name="encryptMode" SelectionChanged="encryptMode_SelectionChanged">
                                     <ComboBoxItem Content="ChaCha20-Poly1305" Tag="Chacha20" />
                                     <ComboBoxItem Content="AES-256-GCM" Tag="AES" />
-                                    <ComboBoxItem Content="XOR" Tag="XOR" />
-                                    <ComboBoxItem Content="Plain" Tag="Plain" />
+                                    <ComboBoxItem Content="XOR (deprecated)" Tag="XOR" />
+                                    <ComboBoxItem Content="Plain (no encryption)" Tag="Plain" />
                                 </ComboBox>
                             </toolkit:SettingsCard>
                             <toolkit:SettingsCard Header="Encryption Secret">
                                 <toolkit:SettingsCard.HeaderIcon>
                                     <FontIcon Glyph="&#xEC19;" />
                                 </toolkit:SettingsCard.HeaderIcon>
-                                <TextBox x:Name="serverSecretTextBox" Text="{x:Bind encryptionSecret, Mode=TwoWay}" PlaceholderText="Enter encryption secret" MinWidth="300"/>
+                                <PasswordBox
+                                    x:Name="serverSecretTextBox"
+                                    MinWidth="300"
+                                    PasswordChanged="ServerSecretPasswordBox_PasswordChanged"
+                                    PlaceholderText="Enter encryption secret" />
                             </toolkit:SettingsCard>
                             <toolkit:SettingsCard Header="Client Identity">
                                 <toolkit:SettingsCard.HeaderIcon>

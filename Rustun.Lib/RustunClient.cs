@@ -19,11 +19,6 @@ public class RustunClient
     public const string AdapterName = "Rustun";
     public const string TunnelType = "Wintun";
 
-    private readonly IPAddress address;
-    private readonly int port;
-    private readonly string identity;
-    private readonly RustunCrypto crypto;
-
     private IChannel? channel;
     private TaskCompletionSource<HandshakeReplyMessage>? handshakeAckCompletion;
     private CancellationTokenSource? handshakeStopCts;
@@ -40,26 +35,9 @@ public class RustunClient
     public event EventHandler? OnDisconnected;
     public event EventHandler<Exception?>? OnError;
 
-    public string Identity => identity;
-
-    public RustunClient(string ip, int port, string identity, string cryptoAlgorithm, string secret)
+    public RustunClient()
     {
-        this.port = port;
-        if (!IPAddress.TryParse(ip, out var address))
-        {
-            throw new FormatException($"Invalid IP address: '{ip}'.");
-        }
-        this.address = address;
-        this.identity = identity;
 
-        // 初始化加密算法
-        this.crypto = cryptoAlgorithm.ToUpperInvariant() switch
-        {
-            "AES" => new RustunAes256Crypto(secret),
-            "XOR" => new RustunXorCrypto(secret),
-            "CHACHA20" => new RustunChacha20Crypto(secret),
-            _ => new RustunCrypto()
-        };
     }
 
     /// <summary>
@@ -69,7 +47,7 @@ public class RustunClient
     /// <param name="port"></param>
     /// <param name="crypto"></param>
     /// <returns></returns>
-    private async Task<IChannel> connectServerAsync(IPAddress address, int port, RustunCrypto crypto)
+    private async Task<IChannel> connectServerAsync(IPAddress address, int port, RustunCrypto crypto, string identity)
     {
         // 配置客户端 Bootstrap
         var bootstrap = new Bootstrap();
@@ -87,7 +65,7 @@ public class RustunClient
                 pipeline.AddLast(new RustunHeartbeatClientHandler(identity));
 
                 // 添加客户端消息处理
-                pipeline.AddLast(new RustunClientHandler(this));
+                pipeline.AddLast(new RustunClientHandler(identity, this));
             }));
 
         // 设置 TCP 选项
@@ -104,15 +82,30 @@ public class RustunClient
     /// 启动
     /// </summary>
     /// <returns></returns>
-    public async Task StartAsync()
+    public async Task StartAsync(string ip, int port, string identity, string cryptoAlgorithm, string secret)
     {
+        if (!IPAddress.TryParse(ip, out var address))
+        {
+            throw new FormatException($"Invalid IP address: '{ip}'.");
+        }
+
+        RustunCrypto crypto = cryptoAlgorithm.ToUpperInvariant() switch
+        {
+            "AES" => new RustunAes256Crypto(secret),
+            "XOR" => new RustunXorCrypto(secret),
+            "CHACHA20" => new RustunChacha20Crypto(secret),
+            "Plain" => new RustunCrypto(),
+            _ => throw new NotSupportedException(
+                $"Unsupported encryption algorithm '{cryptoAlgorithm}'. Supported values: AES, CHACHA20, XOR, Plain."),
+        };
+
         // 创建握手响应完成源
         handshakeAckCompletion = new TaskCompletionSource<HandshakeReplyMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         try
         {
             // 连接服务器
-            channel = await connectServerAsync(address, port, crypto);
+            channel = await connectServerAsync(address, port, crypto, identity);
 
             // 等待握手响应（StopAsync 可通过 handshakeStopCts 取消此等待）
             handshakeStopCts = new CancellationTokenSource();

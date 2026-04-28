@@ -70,6 +70,12 @@ namespace Rustun.Services
             });
         }
 
+        private void UnsubscribeClient(RustunClient client)
+        {
+            client.OnConnected -= Client_OnConnected;
+            client.OnDisconnected -= Client_OnDisconnected;
+        }
+
         public async Task ConnectAsync(string ip, int port, string identity, string crypto, string secret)
         {
             await _operationLock.WaitAsync();
@@ -95,8 +101,7 @@ namespace Rustun.Services
                         Client = null;
                         if (old != null)
                         {
-                            old.OnConnected -= Client_OnConnected;
-                            old.OnDisconnected -= Client_OnDisconnected;
+                            UnsubscribeClient(old);
                         }
                     }
 
@@ -115,7 +120,7 @@ namespace Rustun.Services
                     SetIsConnected(false);
                 }
 
-                var client = new RustunClient(ip, port, identity, crypto, secret);
+                var client = new RustunClient();
                 client.OnConnected += Client_OnConnected;
                 client.OnDisconnected += Client_OnDisconnected;
 
@@ -126,7 +131,7 @@ namespace Rustun.Services
 
                 try
                 {
-                    await client.StartAsync();
+                    await client.StartAsync(ip, port, identity, crypto, secret);
                 }
                 catch
                 {
@@ -150,8 +155,7 @@ namespace Rustun.Services
                 }
 
                 Client = null;
-                client.OnConnected -= Client_OnConnected;
-                client.OnDisconnected -= Client_OnDisconnected;
+                UnsubscribeClient(client);
             }
 
             try
@@ -168,17 +172,26 @@ namespace Rustun.Services
 
         private void Client_OnDisconnected(object? sender, EventArgs e)
         {
+            if (sender is not RustunClient disconnected)
+            {
+                return;
+            }
+
+            bool wasCurrent;
             lock (_clientSync)
             {
-                if (sender is RustunClient disconnected && ReferenceEquals(disconnected, Client))
+                wasCurrent = ReferenceEquals(disconnected, Client);
+                if (wasCurrent)
                 {
-                    disconnected.OnConnected -= Client_OnConnected;
-                    disconnected.OnDisconnected -= Client_OnDisconnected;
+                    UnsubscribeClient(disconnected);
                     Client = null;
                 }
             }
 
-            SetIsConnected(false);
+            if (wasCurrent)
+            {
+                SetIsConnected(false);
+            }
         }
 
         private void Client_OnConnected(object? sender, EventArgs e)
@@ -198,8 +211,7 @@ namespace Rustun.Services
                     Client = null;
                     if (client != null)
                     {
-                        client.OnConnected -= Client_OnConnected;
-                        client.OnDisconnected -= Client_OnDisconnected;
+                        UnsubscribeClient(client);
                     }
                 }
 

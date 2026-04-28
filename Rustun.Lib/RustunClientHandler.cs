@@ -2,6 +2,7 @@ using DotNetty.Transport.Channels;
 using Rustun.Lib.Message;
 using Rustun.Lib.Packet;
 using Serilog;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 
@@ -17,10 +18,12 @@ public class RustunClientHandler : SimpleChannelInboundHandler<RustunPacket>
     };
 
     private readonly RustunClient _client;
+    private readonly string identity;
 
-    public RustunClientHandler(RustunClient client)
+    public RustunClientHandler(string identity, RustunClient client)
     {
         _client = client;
+        this.identity = identity;
     }
 
     protected override void ChannelRead0(IChannelHandlerContext ctx, RustunPacket msg)
@@ -97,7 +100,7 @@ public class RustunClientHandler : SimpleChannelInboundHandler<RustunPacket>
 
     public override void ChannelActive(IChannelHandlerContext context)
     {
-        var handshakeMessage = new HandshakeMessage { Identity = _client.Identity };
+        var handshakeMessage = new HandshakeMessage { Identity = identity };
         var json = JsonSerializer.Serialize(handshakeMessage, JsonOptions);
         var handshakePacket = new RustunPacket(RustunPacketType.Handshake, Encoding.UTF8.GetBytes(json));
         _ = context.WriteAndFlushAsync(handshakePacket);
