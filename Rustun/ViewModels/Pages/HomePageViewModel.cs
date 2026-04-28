@@ -26,22 +26,22 @@ namespace Rustun.ViewModels.Pages
         public string Identity => SettingsHelper.Current.Identity;
 
         /// <summary>隧道 payload 累计上传（由 <see cref="Rustun.Lib.RustunClient"/> 统计）。</summary>
-        public string TrafficUploadedDisplay => ByteFormatHelper.FormatBinary(VpnService.Instance.BytesUploaded);
+        public string TrafficUploadedDisplay => ByteFormatHelper.FormatBinary(TrafficStatisticsService.Instance.BytesUploaded);
 
         /// <summary>隧道 payload 累计下载。</summary>
-        public string TrafficDownloadedDisplay => ByteFormatHelper.FormatBinary(VpnService.Instance.BytesDownloaded);
+        public string TrafficDownloadedDisplay => ByteFormatHelper.FormatBinary(TrafficStatisticsService.Instance.BytesDownloaded);
 
         /// <summary>由相邻两次流量采样估算的上传速率（字节/秒）。</summary>
-        public string TrafficUploadSpeedDisplay => ByteFormatHelper.FormatBytesPerSecond(VpnService.Instance.UploadBytesPerSecond);
+        public string TrafficUploadSpeedDisplay => ByteFormatHelper.FormatBytesPerSecond(TrafficStatisticsService.Instance.UploadBytesPerSecond);
 
         /// <summary>由相邻两次流量采样估算的下载速率（字节/秒）。</summary>
-        public string TrafficDownloadSpeedDisplay => ByteFormatHelper.FormatBytesPerSecond(VpnService.Instance.DownloadBytesPerSecond);
+        public string TrafficDownloadSpeedDisplay => ByteFormatHelper.FormatBytesPerSecond(TrafficStatisticsService.Instance.DownloadBytesPerSecond);
 
         /// <summary>最近 30 分钟上传速率（B/s）样本，按时间先后排列。</summary>
-        public IReadOnlyList<double> UploadSpeedSeries => VpnService.Instance.UploadSpeedSeries;
+        public IReadOnlyList<double> UploadSpeedSeries => TrafficStatisticsService.Instance.UploadSpeedSeries;
 
         /// <summary>最近 30 分钟下载速率（B/s）样本，按时间先后排列。</summary>
-        public IReadOnlyList<double> DownloadSpeedSeries => VpnService.Instance.DownloadSpeedSeries;
+        public IReadOnlyList<double> DownloadSpeedSeries => TrafficStatisticsService.Instance.DownloadSpeedSeries;
 
         public bool IsServerInfoSet
         {
@@ -83,7 +83,7 @@ namespace Rustun.ViewModels.Pages
         {
             SettingsHelper.Current.PropertyChanged += handleSettingsPropertyChanged;
             VpnService.Instance.ConnectionStateChanged += handleVpnConnectionStateChanged;
-            VpnService.Instance.TrafficUpdated += handleTrafficUpdated;
+            TrafficStatisticsService.Instance.TrafficUpdated += handleTrafficUpdated;
 
             IsConnected = VpnService.Instance.IsConnected;
             // 初始化一次显示（实际采样由 VpnService 常驻进行）
@@ -171,7 +171,7 @@ namespace Rustun.ViewModels.Pages
         {
             SettingsHelper.Current.PropertyChanged -= handleSettingsPropertyChanged;
             VpnService.Instance.ConnectionStateChanged -= handleVpnConnectionStateChanged;
-            VpnService.Instance.TrafficUpdated -= handleTrafficUpdated;
+            TrafficStatisticsService.Instance.TrafficUpdated -= handleTrafficUpdated;
         }
     }
 }

@@ -49,7 +49,9 @@ namespace Rustun.Views.Windows
             }
 
             // 将 VpnService 的连接状态回调投递到 UI 线程
-            VpnService.Instance.AttachUiDispatcher(DispatcherQueue.GetForCurrentThread());
+            var dq = DispatcherQueue.GetForCurrentThread();
+            VpnService.Instance.AttachUiDispatcher(dq);
+            TrafficStatisticsService.Instance.AttachUiDispatcher(dq);
         }
 
         // Wraps a call to rootFrame.Navigate to give the Page a way to know which NavigationRootPage is navigating.
