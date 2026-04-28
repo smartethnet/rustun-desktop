@@ -1,7 +1,10 @@
 using Microsoft.UI.Dispatching;
 using Rustun.Lib;
+using Rustun.Lib.Message;
 using Serilog;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,6 +30,8 @@ namespace Rustun.Services
 
         /// <summary>与底层 <see cref="RustunClient"/> 的隧道就绪状态一致；在 UI 线程上触发变更通知。</summary>
         public bool IsConnected => _isConnected;
+
+        public List<PeerDetail> PeerDetails { get; private set; } = new List<PeerDetail>();
 
         /// <summary>
         /// 读取当前客户端隧道累计字节（payload）；未连接时为 0。可在任意线程调用。
@@ -101,11 +106,21 @@ namespace Rustun.Services
             });
         }
 
+        private void UpdatePeerDetails(List<PeerDetail> details)
+        {
+            PeerDetails = details;
+            PostToUi(() =>
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PeerDetails)));
+            });
+        }
+
         /// <summary>取消订阅客户端事件，避免重复回调与泄漏。</summary>
         private void UnsubscribeClient(RustunClient client)
         {
             client.OnConnected -= Client_OnConnected;
             client.OnDisconnected -= Client_OnDisconnected;
+            client.OnPeerDetail -= Client_OnPeerDetailsUpdated;
         }
 
         /// <summary>
@@ -159,6 +174,7 @@ namespace Rustun.Services
                 var client = new RustunClient();
                 client.OnConnected += Client_OnConnected;
                 client.OnDisconnected += Client_OnDisconnected;
+                client.OnPeerDetail += Client_OnPeerDetailsUpdated;
 
                 lock (_clientSync)
                 {
@@ -236,6 +252,16 @@ namespace Rustun.Services
                 SetIsConnected(false);
                 TrafficStatisticsService.Instance.ResetSpeedBaseline();
             }
+        }
+
+        /// <summary>
+        /// 底层客户端 PeerDetails 更新回调：直接更新属性并通知 UI。该回调可能来自非 UI 线程，因此不直接触发 PropertyChanged。
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="details"></param>
+        private void Client_OnPeerDetailsUpdated(object? sender, Collection<PeerDetail> details)
+        {
+            UpdatePeerDetails(new List<PeerDetail>(details));
         }
 
         /// <summary>

@@ -7,9 +7,9 @@ using Rustun.Lib.Crypto;
 using Rustun.Lib.Message;
 using Rustun.Lib.Packet;
 using Serilog;
+using System.Collections.ObjectModel;
 using System.Management;
 using System.Net;
-using System.Threading;
 
 namespace Rustun.Lib;
 
@@ -44,6 +44,7 @@ public class RustunClient
     public event EventHandler? OnConnected;
     public event EventHandler? OnDisconnected;
     public event EventHandler<Exception?>? OnError;
+    public event EventHandler<Collection<PeerDetail>>? OnPeerDetail;
 
     public RustunClient()
     {
@@ -444,6 +445,7 @@ public class RustunClient
         Log.Information($"Disconnect from server");
         await DisposeNetworkResourcesAsync();
 
+        // 重置流量统计
         ResetTrafficStatistics();
 
         // 触发断开连接事件
@@ -472,6 +474,7 @@ public class RustunClient
     /// <returns></returns>
     public Task onDataMessage(byte[] data)
     {
+        // 更新下载流量统计并将数据包发送到虚拟网卡会话
         Interlocked.Add(ref _bytesDownloaded, data.Length);
         if (Session != null)
         {
@@ -480,6 +483,9 @@ public class RustunClient
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 重置流量统计（在每次成功连接服务器并建立会话后调用，确保流量统计反映当前会话的流量而不是累计的历史流量）
+    /// </summary>
     private void ResetTrafficStatistics()
     {
         Interlocked.Exchange(ref _bytesUploaded, 0);
@@ -503,7 +509,13 @@ public class RustunClient
     /// <returns></returns>
     public Task onHandshakeReplyMessage(HandshakeReplyMessage message)
     {
+        // 设置握手响应完成源的结果，通知 StartAsync 方法继续执行
         _ = handshakeAckCompletion?.TrySetResult(message);
+
+        // 触发 PeerDetail 事件，通知调用者当前的对等节点信息（如果有）
+        OnPeerDetail?.Invoke(this, new Collection<PeerDetail>(message.PeerDetails ?? new List<PeerDetail>()));
+
+        // 客户端无需对握手响应消息做其他处理，返回即可
         return Task.CompletedTask;
     }
 
@@ -514,6 +526,10 @@ public class RustunClient
     /// <returns></returns>
     public Task onKeepAliveMessage(KeepAliveMessage message)
     {
+        // 触发 PeerDetail 事件，通知调用者当前的对等节点信息（如果有）
+        OnPeerDetail?.Invoke(this, new Collection<PeerDetail>(message.PeerDetails ?? new List<PeerDetail>()));
+
+        // 客户端无需对心跳消息做其他处理，返回即可
         return Task.CompletedTask;
     }
 

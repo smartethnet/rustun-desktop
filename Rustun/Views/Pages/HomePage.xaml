@@ -278,30 +278,6 @@
                         </StackPanel>
                     </Border>
                 </Grid>
-
-                <!-- Peers -->
-                <Grid>
-                    <Border
-                        CornerRadius="{StaticResource CardCornerRadius}"
-                        Background="Black"
-                        Opacity="{StaticResource CardShadowOpacity}"
-                        Margin="{StaticResource CardShadowMargin}"
-                        IsHitTestVisible="False" />
-                    <Border
-                        CornerRadius="{StaticResource CardCornerRadius}"
-                        Background="{ThemeResource CardBackgroundFillColorDefault}"
-                        BorderThickness="1"
-                        BorderBrush="{ThemeResource CardStrokeColorDefault}"
-                        Padding="16">
-                        <StackPanel Spacing="8">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon Glyph="&#xE902;" />
-                                <TextBlock Text="Peers（预留）" Style="{StaticResource SubtitleTextBlockStyle}" />
-                            </StackPanel>
-                            <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="暂未实现：后续可展示对端列表与实时流量统计。" />
-                        </StackPanel>
-                    </Border>
-                </Grid>
             </StackPanel>
         </ScrollView>
     </Grid>

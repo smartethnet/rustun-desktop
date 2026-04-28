@@ -104,6 +104,9 @@ namespace Rustun.Views.Windows
                     case "home":
                         RootFrame.Navigate(typeof(HomePage));
                         break;
+                    case "peers":
+                        RootFrame.Navigate(typeof(PeersPage));
+                        break;
                     default:
                         break;
                 }
