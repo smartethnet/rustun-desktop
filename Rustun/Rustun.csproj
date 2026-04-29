@@ -70,6 +70,11 @@
     <ProjectReference Include="..\Rustun.Lib\Rustun.Lib.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Page Update="Controls\PeersEmptyState.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
     <Page Update="Views\Pages\PeersPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
