@@ -43,6 +43,9 @@ namespace Rustun.ViewModels.Pages
         /// <summary>最近 30 分钟下载速率（B/s）样本，按时间先后排列。</summary>
         public IReadOnlyList<double> DownloadSpeedSeries => TrafficStatisticsService.Instance.DownloadSpeedSeries;
 
+        /// <summary>流量曲线序列内容版本号（底层缓冲就地更新时递增）。</summary>
+        public long TrafficSeriesRevision => TrafficStatisticsService.Instance.TrafficSeriesRevision;
+
         public bool IsServerInfoSet
         {
             get
@@ -112,6 +115,7 @@ namespace Rustun.ViewModels.Pages
             OnPropertyChanged(nameof(TrafficDownloadSpeedDisplay));
             OnPropertyChanged(nameof(UploadSpeedSeries));
             OnPropertyChanged(nameof(DownloadSpeedSeries));
+            OnPropertyChanged(nameof(TrafficSeriesRevision));
         }
 
         /// <summary>设置项变更回调：刷新服务器地址/身份等显示。</summary>

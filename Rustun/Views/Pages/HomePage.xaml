@@ -231,7 +231,8 @@
                                 Margin="0,10,0,0"
                                 Height="180"
                                 UploadSeries="{x:Bind viewModel.UploadSpeedSeries, Mode=OneWay}"
-                                DownloadSeries="{x:Bind viewModel.DownloadSpeedSeries, Mode=OneWay}" />
+                                DownloadSeries="{x:Bind viewModel.DownloadSpeedSeries, Mode=OneWay}"
+                                DataSeriesRevision="{x:Bind viewModel.TrafficSeriesRevision, Mode=OneWay}" />
                         </StackPanel>
                     </Border>
                 </Grid>

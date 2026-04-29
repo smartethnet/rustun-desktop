@@ -6,7 +6,6 @@ using Microsoft.UI.Xaml.Media;
 using Rustun.Helpers;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Windows.Foundation;
 
 namespace Rustun.Controls;
@@ -37,6 +36,13 @@ public sealed partial class TrafficLineChart : UserControl
             typeof(TrafficLineChart),
             new PropertyMetadata(null, OnSeriesChanged));
 
+    public static readonly DependencyProperty DataSeriesRevisionProperty =
+        DependencyProperty.Register(
+            nameof(DataSeriesRevision),
+            typeof(long),
+            typeof(TrafficLineChart),
+            new PropertyMetadata(0L, OnSeriesChanged));
+
     public IReadOnlyList<double>? UploadSeries
     {
         get => (IReadOnlyList<double>?)GetValue(UploadSeriesProperty);
@@ -54,6 +60,15 @@ public sealed partial class TrafficLineChart : UserControl
     {
         get => (IReadOnlyList<DateTimeOffset>?)GetValue(TimeSeriesProperty);
         set => SetValue(TimeSeriesProperty, value);
+    }
+
+    /// <summary>
+    /// 当曲线底层数据为“就地更新”时，用该版本号驱动重绘（避免仅依赖引用不变的 <see cref="UploadSeries"/>/<see cref="DownloadSeries"/>）。
+    /// </summary>
+    public long DataSeriesRevision
+    {
+        get => (long)GetValue(DataSeriesRevisionProperty);
+        set => SetValue(DataSeriesRevisionProperty, value);
     }
 
     public TrafficLineChart()
@@ -101,11 +116,11 @@ public sealed partial class TrafficLineChart : UserControl
         var max = 1d;
         if (upload is { Count: > 0 })
         {
-            max = Math.Max(max, upload.Max());
+            max = Math.Max(max, MaxValue(upload));
         }
         if (download is { Count: > 0 })
         {
-            max = Math.Max(max, download.Max());
+            max = Math.Max(max, MaxValue(download));
         }
 
         // 给顶部留一点空隙，避免贴边
@@ -126,6 +141,20 @@ public sealed partial class TrafficLineChart : UserControl
 
         UploadFill.Points = BuildFillPolygon(uploadPoints, width, height);
         DownloadFill.Points = BuildFillPolygon(downloadPoints, width, height);
+    }
+
+    private static double MaxValue(IReadOnlyList<double> series)
+    {
+        var max = 0d;
+        for (var i = 0; i < series.Count; i++)
+        {
+            var v = series[i];
+            if (v > max)
+            {
+                max = v;
+            }
+        }
+        return max;
     }
 
     /// <summary>绘制背景网格（水平/竖向虚线辅助线）。</summary>

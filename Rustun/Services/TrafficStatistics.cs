@@ -24,15 +24,21 @@ internal sealed class TrafficStatistics
     private readonly double[] _downloadRing = new double[HistorySeconds];
     private int _ringHead;
     private int _ringCount;
-    private double[] _uploadSnapshot = [];
-    private double[] _downloadSnapshot = [];
+    private readonly RingBufferSeriesView _uploadSeriesView = new(HistorySeconds);
+    private readonly RingBufferSeriesView _downloadSeriesView = new(HistorySeconds);
+    private long _seriesRevision;
 
     public long BytesUploaded => _bytesUploaded;
     public long BytesDownloaded => _bytesDownloaded;
     public double UploadBytesPerSecond => _uploadBps;
     public double DownloadBytesPerSecond => _downloadBps;
-    public IReadOnlyList<double> UploadSpeedSeries => _uploadSnapshot;
-    public IReadOnlyList<double> DownloadSpeedSeries => _downloadSnapshot;
+    public IReadOnlyList<double> UploadSpeedSeries => _uploadSeriesView;
+    public IReadOnlyList<double> DownloadSpeedSeries => _downloadSeriesView;
+
+    /// <summary>
+    /// 曲线数据内容版本号：在底层数组就地更新时递增，供 UI 侧用轻量属性变更触发重绘。
+    /// </summary>
+    public long SeriesRevision => _seriesRevision;
 
     /// <summary>当采样完成并更新了内部状态时触发。</summary>
     public event EventHandler? Updated;
@@ -44,6 +50,14 @@ internal sealed class TrafficStatistics
     public void ResetSpeedBaseline()
     {
         _baselineReady = false;
+        _ringHead = 0;
+        _ringCount = 0;
+        _uploadSeriesView.Reset();
+        _downloadSeriesView.Reset();
+        unchecked
+        {
+            _seriesRevision++;
+        }
     }
 
     /// <summary>
@@ -89,7 +103,7 @@ internal sealed class TrafficStatistics
     }
 
     /// <summary>
-    /// 追加一条速率样本到历史环形缓冲，并更新快照数组（按时间先后排列）。
+    /// 追加一条速率样本到历史环形缓冲，并更新用于 UI 绑定的连续视图（按时间先后排列，就地写入）。
     /// </summary>
     private void AppendHistory(double uploadBps, double downloadBps)
     {
@@ -99,29 +113,12 @@ internal sealed class TrafficStatistics
         _ringHead = (_ringHead + 1) % HistorySeconds;
         _ringCount = Math.Min(HistorySeconds, _ringCount + 1);
 
-        _uploadSnapshot = SnapshotRing(_uploadRing, _ringHead, _ringCount);
-        _downloadSnapshot = SnapshotRing(_downloadRing, _ringHead, _ringCount);
-    }
-
-    /// <summary>
-    /// 将环形缓冲复制为连续数组（旧 → 新），用于绑定/UI 展示。
-    /// </summary>
-    private static double[] SnapshotRing(double[] ring, int head, int count)
-    {
-        if (count <= 0)
+        _uploadSeriesView.CopyFromRing(_uploadRing, _ringHead, _ringCount);
+        _downloadSeriesView.CopyFromRing(_downloadRing, _ringHead, _ringCount);
+        unchecked
         {
-            return [];
+            _seriesRevision++;
         }
-
-        var result = new double[count];
-        var start = (head - count + HistorySeconds) % HistorySeconds;
-        var firstPart = Math.Min(count, HistorySeconds - start);
-        Array.Copy(ring, start, result, 0, firstPart);
-        if (firstPart < count)
-        {
-            Array.Copy(ring, 0, result, firstPart, count - firstPart);
-        }
-        return result;
     }
 }
 

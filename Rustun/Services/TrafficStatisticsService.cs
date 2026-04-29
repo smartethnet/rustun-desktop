@@ -26,6 +26,9 @@ internal sealed class TrafficStatisticsService
     public IReadOnlyList<double> UploadSpeedSeries => _traffic.UploadSpeedSeries;
     public IReadOnlyList<double> DownloadSpeedSeries => _traffic.DownloadSpeedSeries;
 
+    /// <summary>流量曲线序列内容版本号（就地更新底层缓冲时递增）。</summary>
+    public long TrafficSeriesRevision => _traffic.SeriesRevision;
+
     /// <summary>流量统计刷新（每秒一次，已投递到 UI 线程）。</summary>
     public event EventHandler? TrafficUpdated;
 
