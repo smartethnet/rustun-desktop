@@ -183,6 +183,7 @@ namespace Rustun.Services
 
                 try
                 {
+                    UpdatePeerDetails([]);
                     await client.StartAsync(ip, port, identity, crypto, secret);
                 }
                 catch
@@ -212,6 +213,8 @@ namespace Rustun.Services
                 Client = null;
                 UnsubscribeClient(client);
             }
+
+            UpdatePeerDetails([]);
 
             try
             {
@@ -251,6 +254,7 @@ namespace Rustun.Services
             {
                 SetIsConnected(false);
                 TrafficStatisticsService.Instance.ResetSpeedBaseline();
+                UpdatePeerDetails([]);
             }
         }
 
@@ -305,6 +309,7 @@ namespace Rustun.Services
                 }
 
                 SetIsConnected(false);
+                UpdatePeerDetails([]);
             }
             finally
             {
