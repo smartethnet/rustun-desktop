@@ -16,6 +16,7 @@
         <CornerRadius x:Key="CardCornerRadius">8</CornerRadius>
         <x:Double x:Key="CardShadowOpacity">0.10</x:Double>
         <Thickness x:Key="CardShadowMargin">0,3,0,0</Thickness>
+        <x:Double x:Key="PeerCardMinWidth">320</x:Double>
 
         <!-- Status pill brushes (use accent only; avoids unknown theme resources) -->
         <SolidColorBrush x:Key="PillAccentBgBrush" Color="{ThemeResource SystemAccentColor}" Opacity="0.14" />
@@ -80,11 +81,16 @@
 
                     <ItemsRepeater ItemsSource="{x:Bind viewModel.PeerCards, Mode=OneWay}">
                         <ItemsRepeater.Layout>
-                            <StackLayout Spacing="{StaticResource CardSpacing}" />
+                            <!-- 够宽时多列；不够宽时自动退化为单列 -->
+                            <UniformGridLayout
+                                MinColumnSpacing="{StaticResource CardSpacing}"
+                                MinRowSpacing="{StaticResource CardSpacing}"
+                                MinItemWidth="{StaticResource PeerCardMinWidth}"
+                                ItemsJustification="Start" />
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate x:DataType="vm:PeerCardViewModel">
-                                <Grid>
+                                <Grid MinWidth="{StaticResource PeerCardMinWidth}">
                                     <Border
                                         CornerRadius="{StaticResource CardCornerRadius}"
                                         Background="Black"
@@ -98,58 +104,30 @@
                                         BorderBrush="{ThemeResource CardStrokeColorDefault}"
                                         Padding="16">
                                         <StackPanel Spacing="12">
-                                            <Grid ColumnSpacing="12">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Identity" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                                <TextBlock Text="{x:Bind Identity}" />
+                                            </StackPanel>
 
-                                                <StackPanel Grid.Column="0" Spacing="2">
-                                                    <TextBlock Text="{x:Bind Name}" Style="{StaticResource SubtitleTextBlockStyle}" />
-                                                    <TextBlock Text="{x:Bind Identity}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Private IP" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                                <TextBlock Text="{x:Bind PrivateIp}" />
+                                            </StackPanel>
 
-                                                <Border
-                                                    Grid.Column="1"
-                                                    CornerRadius="999"
-                                                    Padding="10,4"
-                                                    Background="{StaticResource PillAccentBgBrush}"
-                                                    BorderBrush="{StaticResource PillAccentStrokeBrush}"
-                                                    BorderThickness="1">
-                                                    <TextBlock Text="{x:Bind LastActiveDisplay}" Foreground="{StaticResource PillAccentTextBrush}" />
-                                                </Border>
-                                            </Grid>
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="IPv6" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                                <TextBlock Text="{x:Bind Ipv6}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
 
-                                            <Grid ColumnSpacing="18" RowSpacing="10">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="CIDRs" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                                <TextBlock Text="{x:Bind CidersDisplay}" TextWrapping="Wrap" />
+                                            </StackPanel>
 
-                                                <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
-                                                    <TextBlock Text="Private IP" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
-                                                    <TextBlock Text="{x:Bind PrivateIp}" />
-                                                </StackPanel>
-
-                                                <StackPanel Grid.Row="0" Grid.Column="1" Spacing="2">
-                                                    <TextBlock Text="Port" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
-                                                    <TextBlock Text="{x:Bind Port}" />
-                                                </StackPanel>
-
-                                                <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2">
-                                                    <TextBlock Text="IPv6" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
-                                                    <TextBlock Text="{x:Bind Ipv6}" TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
-
-                                                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
-                                                    <TextBlock Text="CIDRs" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
-                                                    <TextBlock Text="{x:Bind CidersDisplay}" TextWrapping="Wrap" />
-                                                </StackPanel>
-                                            </Grid>
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Last active" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                                <TextBlock Text="{x:Bind LastActiveDisplay}" TextWrapping="Wrap" />
+                                            </StackPanel>
                                         </StackPanel>
                                     </Border>
                                 </Grid>

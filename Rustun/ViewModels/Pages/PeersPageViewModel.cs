@@ -9,7 +9,6 @@ namespace Rustun.ViewModels.Pages
 {
     public sealed class PeersPageViewModel : ViewModelBase, IDisposable
     {
-        private IReadOnlyList<PeerCardViewModel> _allPeerCards = [];
         private IReadOnlyList<PeerCardViewModel> _peerCards = [];
 
         public IReadOnlyList<PeerCardViewModel> PeerCards => _peerCards;
@@ -55,19 +54,6 @@ namespace Rustun.ViewModels.Pages
 
         public bool IsDisconnected => !_isConnected;
 
-        private string _searchText = string.Empty;
-        public string SearchText
-        {
-            get => _searchText;
-            set
-            {
-                if (_searchText == value) return;
-                _searchText = value ?? string.Empty;
-                OnPropertyChanged();
-                ApplyFilter();
-            }
-        }
-
         public PeersPageViewModel()
         {
             VpnService.Instance.PropertyChanged += handleVpnPropertyChanged;
@@ -84,41 +70,15 @@ namespace Rustun.ViewModels.Pages
             {
                 cards.Add(new PeerCardViewModel
                 {
-                    Name = p.Name,
                     Identity = p.Identity,
                     PrivateIp = p.PrivateIp,
-                    Ipv6 = p.Ipv6,
-                    Port = p.Port,
+                    Ipv6 = string.IsNullOrEmpty(p.Ipv6) ? "-" : p.Ipv6,
                     CidersDisplay = FormatCiders(p.Ciders),
                     LastActiveDisplay = FormatLastActive(p.LastActive),
                 });
             }
 
-            _allPeerCards = cards;
-            ApplyFilter();
-        }
-
-        private void ApplyFilter()
-        {
-            string q = (_searchText ?? string.Empty).Trim();
-            IReadOnlyList<PeerCardViewModel> filtered;
-            if (string.IsNullOrEmpty(q))
-            {
-                filtered = _allPeerCards;
-            }
-            else
-            {
-                filtered = _allPeerCards
-                    .Where(p =>
-                        ContainsIgnoreCase(p.Name, q) ||
-                        ContainsIgnoreCase(p.Identity, q) ||
-                        ContainsIgnoreCase(p.PrivateIp, q) ||
-                        ContainsIgnoreCase(p.Ipv6, q) ||
-                        ContainsIgnoreCase(p.CidersDisplay, q))
-                    .ToList();
-            }
-
-            _peerCards = filtered;
+            _peerCards = cards;
             OnPropertyChanged(nameof(PeerCards));
             OnPropertyChanged(nameof(IsPeerEmpty));
             UpdateEmptyText();
@@ -135,12 +95,6 @@ namespace Rustun.ViewModels.Pages
 
             EmptyTitle = "暂无 Peer 信息";
             EmptyDescription = "已连接，等待同步 Peer 列表…";
-        }
-
-        private static bool ContainsIgnoreCase(string? source, string query)
-        {
-            if (string.IsNullOrEmpty(source)) return false;
-            return source.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private void handleVpnPropertyChanged(object? sender, PropertyChangedEventArgs e)
