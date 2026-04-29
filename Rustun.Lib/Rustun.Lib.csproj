@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -15,6 +15,8 @@
     <PackageReference Include="NetWintun" Version="1.0.4" />
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="System.Management" Version="10.0.7" />
+    <PackageReference Include="Vanara.PInvoke.IpHlpApi" Version="5.0.4" />
+    <PackageReference Include="Vanara.PInvoke.Ws2_32" Version="5.0.4" />
   </ItemGroup>
 
 </Project>

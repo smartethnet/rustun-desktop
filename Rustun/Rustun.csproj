@@ -59,7 +59,6 @@
     <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="System.Management" Version="10.0.7" />
-    <PackageReference Include="Vanara.PInvoke.IpHlpApi" Version="5.0.4" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Models\" />

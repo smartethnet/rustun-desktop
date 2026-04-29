@@ -7,9 +7,12 @@ using Rustun.Lib.Crypto;
 using Rustun.Lib.Message;
 using Rustun.Lib.Packet;
 using Serilog;
+using System.Buffers.Binary;
 using System.Collections.ObjectModel;
 using System.Management;
 using System.Net;
+using System.Net.Sockets;
+using Vanara.PInvoke;
 
 namespace Rustun.Lib;
 
@@ -31,6 +34,9 @@ public class RustunClient
     private Adapter? Adapter;
     private Guid? AdapterId;
     private Session? Session;
+
+    /// <summary>由握手返回的 peer <c>ciders</c> 添加的 IPv4 路由，断开时通过 <see cref="DeleteIpForwardEntry2"/> 删除。</summary>
+    private readonly List<IpHlpApi.MIB_IPFORWARD_ROW2> _peerCiderForwardRows = [];
 
     private long _bytesUploaded;
     private long _bytesDownloaded;
@@ -144,6 +150,9 @@ public class RustunClient
             var interfaceId = AdapterId?.ToString() ?? throw new InvalidOperationException("Adapter ID is null after creation.");
             setVirtualNetworkAdapterIpAddress(interfaceId, response.PrivateIp, response.Mask);
             setVirtualNetworkAdapterGateway(interfaceId, response.Gateway);
+
+            // 添加对等路由
+            addPeerCiderRoutesThroughVirtualAdapter(response, AdapterId.Value);
 
             // 新会话流量统计从 0 开始；先通知就绪再启动转发，保证统计与「已连接」语义一致
             ResetTrafficStatistics();
@@ -344,6 +353,8 @@ public class RustunClient
     /// <returns></returns>
     private async Task DisposeNetworkResourcesAsync()
     {
+        removePeerCiderRoutes();
+
         // 关闭流量转发
         trafficCts?.Cancel();
         var tt = trafficTask;
@@ -419,6 +430,141 @@ public class RustunClient
                 AdapterId = null;
             }
         }
+    }
+
+    /// <summary>
+    /// 将握手返回的各 Peer <c>ciders</c> 中的 IPv4 CIDR 添加为系统路由，出站接口为当前 Wintun 适配器（使访问这些网段的流量经虚拟网卡进入隧道）。
+    /// </summary>
+    private void addPeerCiderRoutesThroughVirtualAdapter(HandshakeReplyMessage response, Guid adapterGuid)
+    {
+        // 先删除之前添加的 Peer Cider 路由，避免重复添加或旧路由残留
+        removePeerCiderRoutes();
+
+        var conv = IpHlpApi.ConvertInterfaceGuidToLuid(in adapterGuid, out IpHlpApi.NET_LUID interfaceLuid);
+        if (conv != 0)
+        {
+            Log.Warning("ConvertInterfaceGuidToLuid failed for adapter {AdapterGuid}: Win32 {Code}", adapterGuid, conv);
+            return;
+        }
+
+        var nextHop = (Ws2_32.SOCKADDR_INET)new Ws2_32.SOCKADDR_IN(new Ws2_32.IN_ADDR(0u), 0);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var peer in response.PeerDetails ?? [])
+        {
+            foreach (var cidr in peer.Ciders ?? [])
+            {
+                if (string.IsNullOrWhiteSpace(cidr))
+                {
+                    continue;
+                }
+
+                if (!tryParseIpv4Cidr(cidr.Trim(), out var networkBytes, out var prefixLen))
+                {
+                    Log.Debug("Skip non-IPv4 or invalid cidr: {Cidr}", cidr);
+                    continue;
+                }
+
+                var key = $"{networkBytes[0]}.{networkBytes[1]}.{networkBytes[2]}.{networkBytes[3]}/{prefixLen}";
+                if (!seen.Add(key))
+                {
+                    continue;
+                }
+
+                IpHlpApi.InitializeIpForwardEntry(out IpHlpApi.MIB_IPFORWARD_ROW2 row);
+
+                row.InterfaceLuid = interfaceLuid;
+                row.DestinationPrefix = new IpHlpApi.IP_ADDRESS_PREFIX((Ws2_32.SOCKADDR_INET)new Ws2_32.SOCKADDR_IN(new Ws2_32.IN_ADDR(networkBytes), 0), prefixLen);
+                row.NextHop = nextHop;
+                row.Protocol = IpHlpApi.MIB_IPFORWARD_PROTO.MIB_IPPROTO_NETMGMT;
+                row.SitePrefixLength = prefixLen;
+                row.Metric = unchecked((uint)-1);
+
+                var err = IpHlpApi.CreateIpForwardEntry2(ref row);
+                if (err != 0)
+                {
+                    if (err == 183)
+                    {
+                        Log.Debug("Route already exists, skip: {Cidr}", cidr);
+                        continue;
+                    }
+
+                    Log.Warning("CreateIpForwardEntry2 failed for {Cidr}: Win32 {Code}", cidr, err);
+                    continue;
+                }
+
+                _peerCiderForwardRows.Add(row);
+                Log.Information("Added peer cidr route {Cidr} via Wintun (LUID).", key);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 删除之前添加的 Peer Cider 路由
+    /// </summary>
+    private void removePeerCiderRoutes()
+    {
+        if (_peerCiderForwardRows.Count == 0)
+        {
+            return;
+        }
+
+        for (var i = _peerCiderForwardRows.Count - 1; i >= 0; i--)
+        {
+            var row = _peerCiderForwardRows[i];
+            var err = IpHlpApi.DeleteIpForwardEntry2(ref row);
+            if (err != 0 && err != 1168)
+            {
+                Log.Warning("DeleteIpForwardEntry2 failed: Win32 {Code}", err);
+            }
+        }
+
+        _peerCiderForwardRows.Clear();
+    }
+
+    /// <summary>
+    /// 尝试将 IPv4 CIDR 表示法的字符串解析为网络地址和前缀长度。
+    /// </summary>
+    /// <remarks>仅支持标准 IPv4 CIDR 表达式。前缀长度必须在 0 到 32 之间。解析失败时，输出参数将被重置为默认值。</remarks>
+    /// <param name="cidr">要解析的 IPv4 CIDR 字符串（例如 "192.168.1.0/24"）。必须为有效的 IPv4 地址和前缀长度格式。</param>
+    /// <param name="networkBytes">如果解析成功，则包含网络地址的 4 字节数组；否则为一个空数组。</param>
+    /// <param name="prefixLen">如果解析成功，则包含网络前缀长度（0 到 32）；否则为 0。</param>
+    /// <returns>如果解析成功，则为 <see langword="true"/>；否则为 <see langword="false"/>。</returns>
+    private static bool tryParseIpv4Cidr(string cidr, out byte[] networkBytes, out byte prefixLen)
+    {
+        networkBytes = Array.Empty<byte>();
+        prefixLen = 0;
+
+        var slash = cidr.IndexOf('/');
+        if (slash <= 0 || slash >= cidr.Length - 1)
+        {
+            return false;
+        }
+
+        if (!IPAddress.TryParse(cidr.AsSpan(0, slash), out var ip) || ip.AddressFamily != AddressFamily.InterNetwork)
+        {
+            return false;
+        }
+
+        if (!byte.TryParse(cidr.AsSpan(slash + 1), out var p) || p > 32)
+        {
+            return false;
+        }
+
+        prefixLen = p;
+        ReadOnlySpan<byte> addr = ip.GetAddressBytes();
+        if (addr.Length != 4)
+        {
+            return false;
+        }
+
+        uint host = BinaryPrimitives.ReadUInt32BigEndian(addr);
+        uint mask = p == 0 ? 0u : uint.MaxValue << (32 - p);
+        uint net = host & mask;
+
+        networkBytes = new byte[4];
+        BinaryPrimitives.WriteUInt32BigEndian(networkBytes, net);
+        return true;
     }
 
     /// <summary>
