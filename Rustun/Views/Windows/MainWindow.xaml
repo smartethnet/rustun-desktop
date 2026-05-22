@@ -23,10 +23,9 @@
         <TitleBar x:Name="AppTitleBar" 
                   Title="Rustun" 
                   Subtitle="Dev" 
-                  IsPaneToggleButtonVisible="True" 
-                  IsBackButtonVisible="{x:Bind RootFrame.CanGoBack, Mode=OneWay}"
-                  PaneToggleRequested="TitleBar_PaneToggleRequested" 
-                  BackRequested="TitleBar_BackRequested">
+                  IsPaneToggleButtonVisible="False" 
+                  IsBackButtonVisible="False"
+                  PaneToggleRequested="TitleBar_PaneToggleRequested" >
             <TitleBar.IconSource>
                 <ImageIconSource ImageSource="/Assets/app.ico" />
             </TitleBar.IconSource>
@@ -52,7 +51,7 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
-            <Frame x:Name="RootFrame" Navigated="OnNavigated"/>
+            <Frame x:Name="RootFrame" />
         </NavigationView>
     </Grid>
 </Window>

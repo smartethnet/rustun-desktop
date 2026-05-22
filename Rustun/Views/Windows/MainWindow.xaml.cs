@@ -119,26 +119,6 @@ namespace Rustun.Views.Windows
             NavigationViewControl.IsPaneOpen = !NavigationViewControl.IsPaneOpen;
         }
 
-        /// <summary>标题栏返回按钮回调。</summary>
-        private void TitleBar_BackRequested(TitleBar sender, object args)
-        {
-            if (!RootFrame.CanGoBack)
-            {
-                return;
-            }
-
-            RootFrame.GoBack();
-            // GoBack 后 Navigated 也会触发；此处再同步一次，避免仅依赖 SourcePageType 导致选中项不更新。
-            UpdateNavigationViewSelectionForPage(GetCurrentFramePageType());
-        }
-
-        /// <summary>Frame 导航完成回调：同步左侧菜单选中状态。</summary>
-        private void OnNavigated(object sender, NavigationEventArgs e)
-        {
-            var pageType = (e.Content as Page)?.GetType() ?? e.SourcePageType;
-            UpdateNavigationViewSelectionForPage(pageType);
-        }
-
         /// <summary>
         /// 根据当前 Frame 中的页面类型，同步 <see cref="NavigationView"/> 的选中项（含设置项）。
         /// </summary>
@@ -167,17 +147,6 @@ namespace Rustun.Views.Windows
                     return;
                 }
             }
-        }
-
-        /// <summary>获取当前 Frame 中页面类型。</summary>
-        private Type? GetCurrentFramePageType()
-        {
-            if (RootFrame.Content is Page page)
-            {
-                return page.GetType();
-            }
-
-            return RootFrame.CurrentSourcePageType;
         }
 
         /// <summary>NavigationView Loaded：用于延迟同步视觉状态等初始化逻辑。</summary>
